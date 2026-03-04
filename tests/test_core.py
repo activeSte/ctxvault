@@ -84,4 +84,4 @@ def test_list_vaults_returns_list(mock_global_config):
 
 def test_list_vaults_contains_created_vault(mock_vault_config):
     result = vault.list_vaults()
-    assert "test_vault" in result
+    assert any(v['name'] == 'test_vault' for v in result)

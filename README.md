@@ -35,6 +35,20 @@ The result is a memory layer that behaves like real infrastructure: composable, 
 
 ## Core Principles
 
+### Structural isolation and access control
+
+Isolation enforced through prompt logic or metadata schemas is fragile — it grows harder to reason about as systems scale, and fails silently when it breaks.
+
+In CtxVault, each vault is an independent index. Agents have no shared retrieval path unless one is explicitly defined. Vaults can be declared restricted, with access granted to specific agents directly through the CLI. The boundary is part of the architecture, not a rule written in a config file that someone might later get wrong.
+
+```bash
+# Initialize a restricted vault and attach only the agent that should reach it
+ctxvault init internal-docs --restricted
+ctxvault attach internal-docs research-agent
+```
+
+---
+
 ### Persistent memory across sessions
 
 Agents lose all context when a session ends. CtxVault gives them a knowledge base that persists across conversations, queryable by meaning rather than exact match. Context written in one session is retrievable days later using semantically related language.
@@ -47,20 +61,6 @@ Agents lose all context when a session ends. CtxVault gives them a knowledge bas
   >
   <p><sub>Persistent memory across sessions — shown with Claude Desktop, works with any MCP-compatible client.</sub></p>
 </div>
-
----
-
-### Structural isolation and access control
-
-Isolation enforced through prompt logic or metadata schemas is fragile — it grows harder to reason about as systems scale, and fails silently when it breaks.
-
-In CtxVault, each vault is an independent index. Agents have no shared retrieval path unless one is explicitly defined. Vaults can be declared restricted, with access granted to specific agents directly through the CLI. The boundary is part of the architecture, not a rule written in a config file that someone might later get wrong.
-
-```bash
-# Initialize a restricted vault and attach only the agent that should reach it
-ctxvault init internal-docs --restricted
-ctxvault attach internal-docs research-agent
-```
 
 ---
 

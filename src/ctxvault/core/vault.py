@@ -38,7 +38,7 @@ def detach_agent(vault_name: str, agent_name: str) -> None:
 def make_public(vault_name: str) -> None:
     _make_public(vault_name=vault_name)
 
-def init_vault(vault_name: str, restricted: bool, path: str | None = None)-> tuple[str, str]:
+def init_vault(vault_name: str, restricted: bool = False, path: str | None = None)-> tuple[str, str]:
 
     #TODO: check if a vault already exist in this path
     vault_path, config_path = create_vault(vault_name=vault_name, restricted=restricted, vault_path=path)

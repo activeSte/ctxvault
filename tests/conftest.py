@@ -77,7 +77,7 @@ def mock_vault_not_initialized(mock_global_config, tmp_path):
 def mock_vault_config(mock_global_config):
     vault_name = "test_vault"
 
-    vault_path, config_path = create_vault(vault_name, "")
+    vault_path, config_path = create_vault(vault_name, False, None)
 
     return Path(vault_path)
 
