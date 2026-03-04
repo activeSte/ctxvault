@@ -1,265 +1,107 @@
-# Persistent Memory Agent
+# 03 · Persistent Memory Agent
 
-**Agent with long-term memory that persists across sessions using semantic recall.**
+An agent that accumulates context across sessions and retrieves it
+semantically — days later, with different words.
+
+This example demonstrates the persistent memory Core Principle directly:
+a vault used not for document retrieval but as a living memory layer
+that the agent writes to autonomously and queries across time.
+
+---
 
 ## Scenario
 
-You have a personal assistant that helps throughout your week. Unlike traditional chatbots that forget everything when you close them, this assistant **remembers**.
+Three sessions simulated across a week. In session one the agent saves
+meeting notes, cost targets, and action items. In session two it recalls
+them using semantically related language — "financial constraints" finds
+"15% cost cut" written three days prior. In session three it synthesizes
+patterns across all accumulated sessions.
 
-**Monday:** You share meeting notes, tasks, thoughts
-**Wednesday:** You ask "What did I say about competitors?" → Assistant recalls semantically
-**Next Monday:** You ask "Summarize my week" → Assistant synthesizes patterns across all sessions
-
-This is **temporal semantic memory** - not possible with conversation state alone.
-
----
-
-## What This Demonstrates
-
-**Core capability:** CtxVault as persistent memory layer with cross-session intelligence
-
-- **Accumulation:** Agent saves context from multiple interactions
-- **Semantic recall:** Fuzzy queries find relevant past context (not keyword matching)
-- **Temporal synthesis:** Cross-session pattern recognition and intelligence
-- **True persistence:** Memory survives across days/weeks, not just within a single run
-
-**Real use case:** Personal assistants, research companions, team collaboration tools.
+This is not state restoration. LangGraph checkpointers can replay an
+exact conversation — they cannot semantically search across multiple
+sessions from different days. The vault provides that layer.
 
 ---
 
-## Quick Start
+## What this demonstrates
 
-### 1. Install dependencies
+- Agent writing to vault autonomously via the write API
+- Semantic recall across sessions with fuzzy queries
+- Cross-session synthesis from accumulated memory
+- Vault as long-term memory, not just document index
+
+---
+
+## Setup
 ```bash
-python -m venv .venv-example-03 && source .venv-example-03/bin/activate  # Windows: .venv-example-03\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-### 2. Set OpenAI API key
-```bash
 export OPENAI_API_KEY=your_key
-```
-
-### 3. Run
-```bash
 python app.py
 ```
 
-The demo simulates 3 sessions over a week, showing how the assistant builds and uses persistent memory.
-
 ---
 
-## What to Watch For
+## What happens
 
-### Session 1 (Day 1)
-Assistant accumulates **5 interactions** throughout the day:
-- Meeting notes
-- Cost reduction targets
-- Competitor analysis
-- Action items
+**Session 1 — Monday**
+The agent saves five interactions from the day into a single markdown
+file in the vault. The session ends. Memory persists.
 
-All saved to vault as temporal memory.
-
----
-
-### Session 2 (Day 3)
-Notice how **semantic queries** find relevant context:
+**Session 2 — Wednesday**
 ```
-Query: "What financial constraints did I mention?"
+QUERY: What financial constraints did I mention?
 → Finds: "15% cost cut" + "competitor pricing 20% lower"
 
-Query: "Did I discuss anything about competitors?"
-→ Finds: competitor pricing analysis
-
-Query: "Were there any action items?"
+QUERY: Were there any action items?
 → Finds: "prepare slides by Friday" + "follow up on vendor negotiation"
 ```
+The queries never mention "cost" or "slides" — semantic search finds
+the relevant content by meaning.
 
-**This is not keyword matching** - it's true semantic understanding.
-"Financial constraints" finds "cost cut" and "pricing" because they're semantically related.
-
----
-
-### Session 3 (Day 7)
-**Cross-session synthesis**:
-```
-User: "Summarize the key themes from my week"
-
-Agent retrieves from ALL sessions and synthesizes:
-  • 3 main themes identified (cost optimization, competitive analysis, vendor management)
-  • Key decisions tracked
-  • Next steps prioritized
-```
-
-**This cross-session intelligence is impossible with state alone.**
-
-LangGraph state can restore exact conversation, but it **cannot semantically search and synthesize across multiple sessions from days ago.**
+**Session 3 — Monday (one week later)**
+The agent adds new context, then retrieves broadly across both sessions
+and synthesizes the week's themes, decisions, and next steps.
 
 ---
 
-## Example Output
-```
-SESSION 1 - Monday, February 17
-[09:30] Meeting with Sarah about Q2 budget review...
-[11:15] Need to cut cloud costs by 15%...
-[14:45] Competitors pricing 20% lower...
-Saved 5 interactions → session_2026-02-17_001.md
-
-SESSION 2 - Wednesday, February 19
-[QUERY] What financial constraints did I mention?
-    Found in: session_2026-02-17_001.md
-[ASSISTANT] You mentioned 15% cost cut on cloud infrastructure
-             and competitor pricing 20% lower...
-
-SESSION 3 - Monday, February 24
-[QUERY] Summarize key themes from my week
-  Retrieved 5 pieces from 2 sessions
-  Weekly Synthesis:
-    1. Cost Optimization - 15% reduction target, 18% achieved
-    2. Competitive Analysis - pricing gap identified
-    3. Vendor Management - renegotiation opportunities
-```
-
----
-
-## Project Structure
+## Project structure
 ```
 03-persistent-memory/
-├── app.py                
-├── requirements.txt
-└── README.md
+├── app.py
+└── requirements.txt
 ```
 
-No pre-written documents needed - agent creates its own memory files dynamically.
+No pre-written documents — the agent generates its own memory files
+at runtime.
 
 ---
 
-## How It Works
+### Inspect the memory vault
+
+After running the demo, verify what the agent has written:
+```bash
+ctxvault docs assistant-memory
 ```
-Session 1 (Day 1):
-  User shares context
-       ↓
-  Agent saves to vault
-       ↓
-  session_2026-02-17_001.md created
+```
+Found 2 documents in 'assistant-memory'
 
-Session 2 (Day 3):
-  User asks fuzzy question
-       ↓
-  Semantic search in vault
-       ↓
-  Retrieves relevant context from Day 1
-       ↓
-  LLM synthesizes answer
+  1. session_2026-02-17_001.md
+     .md · 3 chunks
 
-Session 3 (Day 7):
-  User asks for synthesis
-       ↓
-  Broad semantic query across ALL sessions
-       ↓
-  LLM identifies patterns, themes, decisions
+  2. session_2026-02-24_002.md
+     .md · 2 chunks
 ```
 
-**Key insight:** CtxVault provides the **semantic memory layer**, LangGraph provides the **intelligence layer**. Combined = powerful persistent agent.
+The agent generated these files autonomously during the sessions.
+They persist on disk — run the demo again and the vault accumulates
+further, or query it directly from the CLI at any time.
 
 ---
 
-## Why This Matters
+## Next
 
-**Traditional approach:**
-- Conversation state lost between sessions
-- No semantic search over history
-- Can't synthesize patterns across time
-
-**With CtxVault persistent memory:**
-- Context survives indefinitely
-- Semantic recall with fuzzy queries
-- Cross-session pattern recognition
-- True long-term assistant behavior
-
----
-
-## CtxVault vs Alternatives
-
-| Feature | LangGraph State | Memory DBs (Mem0/Zep) | CtxVault |
-|---------|----------------|----------------------|----------|
-| Persist across sessions | ❌ (checkpointer restores exact state) | ✅ | ✅ |
-| Semantic search | ❌ | ✅ | ✅ |
-| Simple setup | ✅ | ❌ (external services) | ✅ |
-| Local-first | ✅ | ❌ (cloud APIs) | ✅ |
-| Agent-generated content | ❌ | Partial | ✅ |
-
-CtxVault combines the simplicity of local-first with the power of semantic memory.
-
----
-
-## Customization
-
-### Change the scenario
-
-Edit the `interactions` lists in `session_1()` and `session_3()`:
-```python
-interactions = [
-    {"time": "09:00", "text": "Your custom context here"},
-    {"time": "10:30", "text": "Another interaction"},
-]
-```
-
-### Adjust queries
-
-Modify the `queries` list in `session_2()`:
-```python
-queries = [
-    "Your custom question here",
-    "Another semantic query",
-]
-```
-
-### Use different LLM
-
-Replace OpenAI with Anthropic, Ollama, or any provider:
-```python
-from langchain_anthropic import ChatAnthropic
-llm = ChatAnthropic(model="claude-sonnet-4")
-```
-
-CtxVault is **LLM-agnostic** - works with any provider.
-
----
-
-## Real-World Applications
-
-**Personal use:**
-- Research assistant tracking findings over weeks
-- Study companion remembering learning progress
-- Personal knowledge base with semantic recall
-
-**Enterprise use:**
-- Team assistant tracking project context
-- Meeting notes with cross-session synthesis
-- Customer support agent with persistent customer context
-
-**Developer tools:**
-- Coding assistant learning from past sessions
-- Documentation helper with temporal knowledge
-- Debug assistant tracking solution patterns
-
----
-
-## Key Takeaway
-
-**CtxVault enables true persistent memory for agents.**
-
-Not just state restoration - **semantic search across temporal context**.
-
-Perfect for:
-- Long-term assistants
-- Knowledge accumulation over time
-- Cross-session intelligence
-- Privacy-conscious memory (100% local)
-
----
-
-**Want more?** Check out:
-- Example 01 (simple RAG) for basic retrieval
-- Example 02 (multi-agent isolation) for privacy-aware architectures
+All three examples use the same vault primitive. **Example 01** shows
+it as a document index. **Example 02** shows it as an isolated
+per-agent knowledge base. This example shows it as long-term memory.
+The infrastructure is the same — the topology changes.

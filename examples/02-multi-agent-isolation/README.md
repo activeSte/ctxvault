@@ -1,123 +1,119 @@
-# LangGraph Multi-Vault Example
+# 02 · Multi-Agent Isolation
 
-Privacy-aware multi-agent system with **vault-level access control**.
+Two agents, two restricted vaults. Isolation enforced at the
+infrastructure layer — not through metadata filtering or prompt rules.
+
+This example builds on the single-vault setup of Example 01 and
+introduces the core isolation primitive: each agent has an explicit
+authorization list, checked server-side on every request.
+
+---
 
 ## Scenario
 
-Two agents with different access rights:
+- **research-agent** — authorized to query the research vault only
+- **atlas-agent** — authorized to query the Project Atlas vault only
+- **router** — classifies each query and dispatches it to the appropriate
+  agent (this is application logic, separate from the isolation mechanism)
 
-- **Public Agent** — authorized to access public research papers only
-- **Internal Agent** — authorized to access confidential company documents only
-- **Router** — routes queries to the appropriate agent based on content
+The router can make mistakes. It does not matter. If an agent attempts
+to query a vault it is not authorized for, the server returns 403
+regardless of how the request was made. The isolation does not depend
+on the correctness of the application code.
 
-The key point: access is not enforced by the routing logic. It is enforced at
-the vault level. Even if the router makes a mistake, the server rejects any
-agent that is not authorized for that vault.
+---
 
-## Why This Matters
+## What this demonstrates
 
-Traditional multi-agent systems solve knowledge isolation with metadata
-filtering or routing rules. Both approaches share the same failure mode: one
-misconfiguration and agents see what they shouldn't.
+- Vault topology declared via CLI, enforced server-side
+- Agent identity passed per-request via header
+- Authorization verified independently of routing logic
+- 403 on unauthorized access — structural, not configured
 
-CtxVault enforces isolation at the infrastructure layer:
-
-- Each vault has an explicit list of authorized agents
-- Authorization is checked server-side on every operation
-- No routing logic, no prompt rules, no metadata schema to get wrong
-
-The topology is declared once via CLI. The code does not need to enforce it.
+---
 
 ## Setup
 
 ### 1. Install dependencies
 ```bash
-python -m venv .venv-example-02
-source .venv-example-02/bin/activate  # Windows: .venv-example-02\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+export OPENAI_API_KEY=your_key
 ```
 
-### 2. Set OpenAI API key
+### 2. Declare the vault topology
 ```bash
-export OPENAI_API_KEY="your-key-here"
+ctxvault init atlas-vault --path vaults/atlas-vault
+ctxvault init research-vault --path vaults/research-vault
+
+ctxvault attach atlas-vault atlas-agent
+ctxvault attach research-vault research-agent
 ```
 
-### 3. Initialize vaults and configure access control
+This is the only place access control is declared. The code does not
+enforce it — the infrastructure does.
 
-Create the vaults and declare which agent is authorized to access each one:
+### 3. Inspect the topology
+
+Before running the application, verify the vault configuration:
 ```bash
-ctxvault init public --path vaults/public
-ctxvault init internal --path vaults/internal
-
-ctxvault attach public public-agent
-ctxvault attach internal internal-agent
+ctxvault vaults
+```
 ```
 
-This is the topology declaration. From this point, `public-agent` can only
-access the public vault and `internal-agent` can only access the internal
-vault — regardless of what the code instructs them to do.
+Found 2 vaults
+
+> atlas-vault [RESTRICTED]
+  path:    .../vaults/atlas-vault
+  allowed agents:  atlas-agent
+
+> research-vault [RESTRICTED]
+  path:    .../vaults/research-vault
+  allowed agents:  research-agent
+```
+
+The access control is already in effect. Neither agent can reach the
+other's vault — this is visible and verifiable independently of the
+application code.
 
 ### 4. Run
 ```bash
 python app.py
 ```
 
-## What Happens
+---
 
-1. Both vaults are indexed with their respective documents
-2. The router classifies each query as public or internal
-3. The appropriate agent queries its authorized vault
-4. Each request carries the agent identity in the header
-5. The server verifies authorization before returning results
-
-If an agent attempts to access a vault it is not authorized for, the server
-returns 403 regardless of how the request was made.
-
-## Example Output
+## Example output
 ```
 QUERY: What are the key principles of quantum computing?
-[ROUTER] Detected public query → routing to Public Agent
-[PUBLIC AGENT] Retrieving from public vault...
+[ROUTER] Detected research query → routing to Research Agent
+[RESEARCH AGENT] Retrieving from research vault...
 ANSWER: The key principles are superposition, entanglement...
 
 QUERY: What is Project Atlas and when is it launching?
-[ROUTER] Detected internal query → routing to Internal Agent
-[INTERNAL AGENT] Retrieving from internal vault...
+[ROUTER] Detected atlas query → routing to Atlas Agent
+[ATLAS AGENT] Retrieving from atlas vault...
 ANSWER: Project Atlas is our next-generation platform...
 ```
 
-## Architecture
-```
-User Query
-    ↓
-[Router Node]
-    ↓
-    ├─→ "public"   → [Public Agent]   → query_vault("public",   agent="public-agent")
-    └─→ "internal" → [Internal Agent] → query_vault("internal", agent="internal-agent")
-                                              ↓
-                                     Server verifies agent
-                                     against vault config
-                                     before returning results
-```
+---
 
-## Key Difference From Routing-Based Isolation
+## The difference from metadata filtering
 
-Routing-based isolation:
-- Public agent queries public vault because the router told it to
-- If the router has a bug, the public agent can reach internal docs
-- Isolation depends on the correctness of your application code
+The conventional approach to multi-agent isolation uses a shared vector
+store with metadata filters — each agent queries the same index but
+with a filter that restricts which documents it can see. It works until
+it doesn't: a filter misconfigured, a schema that grows complex, and
+an agent surfaces documents it shouldn't.
 
-Vault-level access control:
-- Public agent queries public vault and is also only allowed to query it
-- If the router has a bug, the server rejects the unauthorized request
-- Isolation is enforced at the infrastructure layer, independent of your code
+Here, each vault is a separate index. There is no shared retrieval path
+between agents. research-agent and atlas-agent cannot reach each other's
+vault through any query — not because a filter prevents it, but because
+the path does not exist. The isolation is structural.
 
-## Total Code
+---
 
-~200 lines for a complete multi-agent system with infrastructure-enforced
-knowledge isolation.
+## Next
 
-## Want More?
-
-- Example 01 — semantic RAG over documents
-- Example 03 — persistent memory across sessions
+**Example 03** introduces persistent memory across sessions — the same
+vault primitive used not for isolation but for long-term agent memory.

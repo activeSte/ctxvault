@@ -1,18 +1,20 @@
 """
-LangChain + CtxVault Personal RAG Demo
+LangChain + CtxVault RAG Demo
 
-Demonstrates building a personal research assistant over your document collection.
+Single vault, single agent. Local semantic search over a document collection
+with grounded answer generation and source attribution.
 
-Scenario:
-- Index papers, notes, and articles on RAG (Retrieval-Augmented Generation)
-- Query your personal knowledge base semantically
-- Get answers grounded in your documents
+Documents:
+- rag_survey_paper.pdf
+- personal_notes.md
+- blog_article.txt
+- rag_comparison.txt
 
 Run:
     python app.py
 
 Requires:
-    export OPENAI_API_KEY=your_key
+    OPENAI_API_KEY environment variable
 """
 
 import os

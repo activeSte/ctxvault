@@ -26,8 +26,7 @@ def create_vault(vault_name: str, restricted: bool, vault_path: str) -> tuple[st
     if not vault_path:
         vault_path = Path(VAULTS_DIR / vault_name).resolve()
     else:
-        #TODO: Validate path
-        vault_path = Path(vault_path)
+        vault_path = Path(vault_path).resolve()
 
     db_path = vault_path / "chroma"
     vault_path.mkdir(parents=True, exist_ok=True)

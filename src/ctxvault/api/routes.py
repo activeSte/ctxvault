@@ -30,19 +30,13 @@ async def init(init_request: InitRequest)-> InitResponse:
     summary="Index documents into a vault",
     description="Chunk, embed, and store documents for semantic search."
 )
-async def index(index_request: IndexRequest, request: Request)-> IndexResponse:
+async def index(index_request: IndexRequest)-> IndexResponse:
     try:
-        check_vault_access(vault_name=index_request.vault_name, request=request)
-
         indexed_files, skipped_files = vault.index_files(vault_name=index_request.vault_name, path=index_request.file_path)
 
         return IndexResponse(indexed_files=indexed_files, skipped_files=skipped_files)
     except VaultNotFoundError as e:
         raise HTTPException(status_code=400, detail=f"Vault {index_request.vault_name} doesn't exist.")
-    except MissingAgentNameError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except VaultAccessDeniedError as e:
-        raise HTTPException(status_code=403, detail=str(e))
 
 @ctxvault_router.post(
     "/query",

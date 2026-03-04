@@ -102,7 +102,7 @@ def vaults():
         is_restricted = v.get("restricted", False)
 
         if is_restricted:
-            typer.secho(f"> {v['name']} [RESTRICTED]", fg=typer.colors.RED, bold=True)
+            typer.secho(f"> {v['name']} [RESTRICTED]", fg=typer.colors.YELLOW, bold=True)
         else:
             typer.secho(f"> {v['name']} [PUBLIC]", fg=typer.colors.GREEN, bold=True)
 
@@ -110,9 +110,9 @@ def vaults():
 
         if is_restricted:
             if allowed_agents:
-                typer.echo(f"  agents: {', '.join(allowed_agents)}")
+                typer.echo(f"  allowed agents: {', '.join(allowed_agents)}")
             else:
-                typer.secho(f"  agents: none authorized yet", fg=typer.colors.YELLOW)
+                typer.secho(f"  allowed agents: none authorized yet", fg=typer.colors.YELLOW)
 
         typer.echo("")
 
@@ -120,10 +120,12 @@ def vaults():
 def docs(name: str = typer.Argument("my-vault")):
     documents = vault.list_documents(vault_name=name)
 
-    typer.secho(f"\nFound {len(documents)} documents\n", fg=typer.colors.GREEN, bold=True)
+    typer.secho(f"\nFound {len(documents)} documents in '{name}'\n", fg=typer.colors.GREEN, bold=True)
 
-    for i in range(len(documents)):
-        typer.echo(f"{i+1}. {documents[i].source} ({documents[i].chunks_count} chunks)")
+    for i, doc in enumerate(documents, 1):
+        filename = Path(doc.source).name
+        typer.echo(f"  {i}. {filename}")
+        typer.secho(f"     {doc.filetype} · {doc.chunks_count} chunks", fg=typer.colors.BRIGHT_BLACK)
 
 @app.command()
 def attach(vault_name: str = typer.Argument("my-vault"), agent_name: str = typer.Argument(...)):

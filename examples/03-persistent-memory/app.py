@@ -1,19 +1,19 @@
 """
 LangGraph + CtxVault Persistent Memory Demo
 
-Demonstrates agent with long-term memory across sessions using semantic recall.
+An agent that writes context to a vault autonomously and retrieves it
+semantically across sessions — days later, with different words.
 
-Scenario:
-- Personal assistant that accumulates context over multiple days
-- Each session: user shares meetings, tasks, thoughts → agent saves to memory
-- Future sessions: agent retrieves relevant context semantically
-- Synthesis: agent identifies patterns across all sessions
+Sessions:
+- Session 1: agent saves interactions to vault as markdown files
+- Session 2: semantic recall with fuzzy queries across saved sessions
+- Session 3: cross-session synthesis from accumulated memory
 
 Run:
     python app.py
 
 Requires:
-    export OPENAI_API_KEY=your_key
+    OPENAI_API_KEY environment variable
 """
 
 import os
