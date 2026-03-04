@@ -116,12 +116,12 @@ CtxVault exposes the same vault layer through three interfaces. Use whichever fi
 
 ## Examples
 
-Three production-ready scenarios — each with full code and setup instructions.
+Three scenarios — each with full code and setup instructions.
 
 | | Example | What it shows |
 |--|---------|---------------|
-| 🟢 | [**Personal Research Assistant**](examples/01-simple-rag/) | Semantic RAG over PDF, MD, TXT, DOCX. Ask questions, get cited answers. ~100 lines. |
-| 🔴 | [**Multi-Agent Isolation**](examples/02-multi-agent-isolation/) | Two agents, two vaults, one router. The public agent has no retrieval path to internal documents — isolation enforced at the knowledge layer, not in prompt logic. ~200 lines. |
+| 🟢 | [**Personal Research Assistant**](examples/01-simple-rag/) | Single vault, single agent. Semantic RAG over PDF, MD, TXT, DOCX with source attribution. ~100 lines.  |
+| 🔴 | [**Multi-Agent Isolation**](examples/02-multi-agent-isolation/) | Two agents, two vaults. Each agent has no retrieval path to the other's vault — isolation enforced at the infrastructure layer, not through metadata filtering. ~200 lines.|
 | 🔵 | [**Persistent Memory Agent**](examples/03-persistent-memory/) | An agent that recalls context across sessions using semantic queries. "financial constraints" retrieves "cut cloud costs by 15%" written three days prior. |
 
 ---
@@ -236,6 +236,20 @@ uv tool install ctxvault
 
 Restart your client. The agent can now query your existing vaults, write new context, and list available knowledge — all locally, all under your control.
 
+**Restricted vaults:** if you are integrating programmatically and need to access a restricted vault, pass the agent name at startup:
+```json
+{
+  "mcpServers": {
+    "ctxvault": {
+      "command": "ctxvault-mcp",
+      "args": ["--agent", "my-agent"]
+    }
+  }
+}
+```
+
+The `--agent` argument is optional and only required for restricted vaults.
+
 ---
 
 ## Documentation
@@ -247,19 +261,76 @@ All commands require a vault name. Default vault location: `~/.ctxvault/vaults/<
 ---
 
 #### `init`
-Initialize a new vault.
+Initialize a new vault. Vaults are public by default — any agent can access them.
+Pass `--restricted` to create a restricted vault, accessible only to explicitly
+attached agents.
 ```bash
-ctxvault init <name> [--path <path>]
+ctxvault init <name> [--path <path>] [--restricted]
 ```
 
 **Arguments:**
 - `<name>` - Vault name (required)
 - `--path <path>` - Custom vault location (optional, default: `~/.ctxvault/vaults/<name>`)
+- `--restricted` - Create vault as restricted (optional, default: public)
 
 **Example:**
 ```bash
 ctxvault init my-vault
 ctxvault init my-vault --path /data/vaults
+ctxvault init my-vault --restricted
+```
+
+---
+
+#### `attach`
+Attach an agent to a vault, granting it access. If the vault is public, attaching
+an agent automatically makes it restricted — only explicitly attached agents will
+be able to access it from that point on.
+```bash
+ctxvault attach <vault> <agent>
+```
+
+**Arguments:**
+- `<vault>` - Vault name (required)
+- `<agent>` - Agent name (required)
+
+**Example:**
+```bash
+ctxvault attach my-vault my-agent
+```
+
+---
+
+#### `detach`
+Remove an agent's access from a restricted vault.
+```bash
+ctxvault detach <vault> <agent>
+```
+
+**Arguments:**
+- `<vault>` - Vault name (required)
+- `<agent>` - Agent name (required)
+
+**Example:**
+```bash
+ctxvault detach my-vault my-agent
+```
+
+---
+
+#### `publish`
+Make a restricted vault public, removing all access restrictions and granting
+access to any agent.
+```bash
+ctxvault publish <vault>
+```
+
+**Arguments:**
+- `<vault>` - Vault name (required)
+
+**Example:**
+```bash
+ctxvault publish my-vault
 ```
 
 ---
@@ -299,10 +370,10 @@ ctxvault query my-vault "attention mechanisms"
 
 ---
 
-#### `list`
-List all indexed documents in vault.
+#### `docs`
+List all indexed documents in a vault.
 ```bash
-ctxvault list <vault>
+ctxvault docs <vault>
 ```
 
 **Arguments:**
@@ -310,13 +381,22 @@ ctxvault list <vault>
 
 **Example:**
 ```bash
-ctxvault list my-vault
+ctxvault docs my-vault
+```
+```
+Found 2 documents in 'my-vault'
+
+  1. paper.pdf
+     .pdf · 12 chunks
+
+  2. notes.md
+     .md · 3 chunks
 ```
 
 ---
 
 #### `delete`
-Remove document from vault.
+Remove a document from a vault.
 ```bash
 ctxvault delete <vault> --path <path>
 ```
@@ -333,7 +413,7 @@ ctxvault delete my-vault --path paper.pdf
 ---
 
 #### `reindex`
-Re-index documents in vault.
+Re-index documents in a vault.
 ```bash
 ctxvault reindex <vault> [--path <path>]
 ```
@@ -351,7 +431,7 @@ ctxvault reindex my-vault --path docs/
 ---
 
 #### `vaults`
-List all vaults and their paths.
+List all vaults with their paths and access configuration.
 ```bash
 ctxvault vaults
 ```
@@ -360,23 +440,30 @@ ctxvault vaults
 ```bash
 ctxvault vaults
 ```
+```
+Found 2 vaults
+> atlas-vault [RESTRICTED]
+  path:    ~/.ctxvault/vaults/atlas-vault
+  agents:  atlas-agent
+
+> research-vault [PUBLIC]
+  path:    ~/.ctxvault/vaults/research-vault
+```
 
 ---
 
 **Vault management:**
 - Default location: `~/.ctxvault/vaults/<vault-name>/`
-- Vault registry: `~/.ctxvault/config.json` tracks all vault names and their paths
-- Custom paths: Use `--path` flag during `init` to create vault at custom location
-- All other commands use vault name (path lookup via config.json)
+- Vault registry: `~/.ctxvault/config.json` tracks all vault names, paths, and access configuration
+- Custom paths: use `--path` during `init` to create vault at a custom location
+- All other commands reference vaults by name — path lookup is handled via `config.json`
 
-**Multi-vault support:**
-```bash
-# Work with specific vault
-ctxvault research query "topic"
-
-# Default vault location: ~/.ctxvault/vaults/
-# Override with --path for custom locations
-```
+**Access control:**
+- Vaults are public by default — any agent can access them
+- `init --restricted` or `attach` make a vault restricted
+- Once restricted, only explicitly attached agents can access it
+- `publish` reverts a restricted vault to public
+- Access is enforced server-side on every request — not in application code
 
 ---
 
@@ -393,7 +480,26 @@ ctxvault research query "topic"
 | `/docs` | GET | List indexed documents |
 | `/delete` | DELETE | Remove document from vault |
 | `/reindex` | PUT | Re-index entire vault or specific path |
-| `/vaults` | GET | List all the initialized vaults |
+| `/vaults` | GET | List all initialized vaults |
+
+**Agent authorization:**
+
+Requests to `/query`, `/write`, `/docs`, `/delete`, and `/reindex` on a restricted
+vault require the `X-CtxVault-Agent` header. The value must match an agent name
+attached to that vault via `ctxvault attach`. Requests without the header, or with
+an unrecognized agent name, return `403`.
+```http
+X-CtxVault-Agent: my-agent
+```
+```python
+requests.post("http://127.0.0.1:8000/ctxvault/query",
+    headers={"X-CtxVault-Agent": "my-agent"},
+    json={"vault_name": "my-vault", "query": "attention mechanisms", "top_k": 3}
+)
+```
+
+Requests to public vaults do not require the header. `/init` and `/vaults` never
+require it.
 
 **Interactive documentation:** Start the server and visit `http://127.0.0.1:8000/docs`
 
