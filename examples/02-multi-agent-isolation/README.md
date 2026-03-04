@@ -1,110 +1,119 @@
-# LangGraph Multi-Vault Example
+# 02 · Multi-Agent Isolation
 
-Privacy-aware multi-agent system with **isolated knowledge access**.
+Two agents, two restricted vaults. Isolation enforced at the
+infrastructure layer — not through metadata filtering or prompt rules.
+
+This example builds on the single-vault setup of Example 01 and
+introduces the core isolation primitive: each agent has an explicit
+authorization list, checked server-side on every request.
+
+---
 
 ## Scenario
 
-Two agents with different security clearances:
+- **research-agent** — authorized to query the research vault only
+- **atlas-agent** — authorized to query the Project Atlas vault only
+- **router** — classifies each query and dispatches it to the appropriate
+  agent (this is application logic, separate from the isolation mechanism)
 
-- **Public Agent** → accesses public research papers only
-- **Internal Agent** → accesses confidential company documents only  
-- **Router** → intelligently routes queries based on content
+The router can make mistakes. It does not matter. If an agent attempts
+to query a vault it is not authorized for, the server returns 403
+regardless of how the request was made. The isolation does not depend
+on the correctness of the application code.
 
-This demonstrates **semantic isolation** - the public agent literally cannot access internal docs, even if prompted to do so.
+---
 
-## Why This Matters
+## What this demonstrates
 
-Traditional multi-agent systems share a single knowledge base. This creates:
-- Privacy risks (agents see everything)
-- Context pollution (irrelevant docs in retrieval)
-- No access control at semantic layer
+- Vault topology declared via CLI, enforced server-side
+- Agent identity passed per-request via header
+- Authorization verified independently of routing logic
+- 403 on unauthorized access — structural, not configured
 
-**CtxVault solves this** with multi-vault architecture:
-- Each agent has its own isolated vault
-- Router controls access at query time
-- Zero chance of cross-contamination
+---
 
 ## Setup
 
 ### 1. Install dependencies
 ```bash
-python -m venv .venv-example-02 && source .venv-example-02/bin/activate  # Windows: .venv-example-02\Scripts\activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+export OPENAI_API_KEY=your_key
 ```
 
-### 2. Set OpenAI API key
+### 2. Declare the vault topology
 ```bash
-export OPENAI_API_KEY="your-key-here"
+ctxvault init atlas-vault --path vaults/atlas-vault
+ctxvault init research-vault --path vaults/research-vault
+
+ctxvault attach atlas-vault atlas-agent
+ctxvault attach research-vault research-agent
 ```
 
-### 3. Run
+This is the only place access control is declared. The code does not
+enforce it — the infrastructure does.
+
+### 3. Inspect the topology
+
+Before running the application, verify the vault configuration:
+```bash
+ctxvault vaults
+```
+```
+
+Found 2 vaults
+
+> atlas-vault [RESTRICTED]
+  path:    .../vaults/atlas-vault
+  allowed agents:  atlas-agent
+
+> research-vault [RESTRICTED]
+  path:    .../vaults/research-vault
+  allowed agents:  research-agent
+```
+
+The access control is already in effect. Neither agent can reach the
+other's vault — this is visible and verifiable independently of the
+application code.
+
+### 4. Run
 ```bash
 python app.py
 ```
 
-## What Happens
+---
 
-The script:
-1. Creates two vaults (`public` and `internal`)
-2. Indexes sample documents into each vault
-3. Runs example queries showing routing logic
-4. Public queries → public vault only
-5. Internal queries → internal vault only
-
-## Example Output
+## Example output
 ```
 QUERY: What are the key principles of quantum computing?
-[ROUTER] Detected public query → routing to Public Agent
-[PUBLIC AGENT] Retrieving from public vault...
+[ROUTER] Detected research query → routing to Research Agent
+[RESEARCH AGENT] Retrieving from research vault...
 ANSWER: The key principles are superposition, entanglement...
 
 QUERY: What is Project Atlas and when is it launching?
-[ROUTER] Detected internal query → routing to Internal Agent
-[INTERNAL AGENT] Retrieving from internal vault...
-ANSWER: Project Atlas is our next-generation semantic search platform...
+[ROUTER] Detected atlas query → routing to Atlas Agent
+[ATLAS AGENT] Retrieving from atlas vault...
+ANSWER: Project Atlas is our next-generation platform...
 ```
-
-## Try Your Own Queries
-
-Modify the `queries` list in `main()` to test different scenarios:
-
-**Public queries** (will use public vault):
-- "How do neural networks learn?"
-- "What is quantum entanglement?"
-
-**Internal queries** (will use internal vault):
-- "What are our revenue projections?"
-- "What challenges does Project Atlas face?"
-
-## Architecture Diagram
-```
-User Query
-    ↓
-[Router Node]
-    ↓
-    ├─→ "public" → [Public Agent] → query_vault("public") → Answer
-    └─→ "internal" → [Internal Agent] → query_vault("internal") → Answer
-```
-
-## Key Takeaway
-
-**CtxVault enables privacy-aware AI agents** without complex access control logic in your code.
-
-Simply:
-1. Create separate vaults for different security contexts
-2. Route queries to appropriate vault
-3. Each agent only sees what it should see
-
-Perfect for:
-- Enterprise systems with compliance requirements
-- Multi-tenant applications
-- Personal + work knowledge separation
-- Agent specialization by domain
 
 ---
 
-**Total code:** ~200 lines for complete multi-agent system with semantic isolation.
+## The difference from metadata filtering
 
-**Want more?** Check out:
-- Example 01 (simple RAG) for basic retrieval
-- Example 03 (persistent memory) for long-term semantic memory that persists across sessions
+The conventional approach to multi-agent isolation uses a shared vector
+store with metadata filters — each agent queries the same index but
+with a filter that restricts which documents it can see. It works until
+it doesn't: a filter misconfigured, a schema that grows complex, and
+an agent surfaces documents it shouldn't.
+
+Here, each vault is a separate index. There is no shared retrieval path
+between agents. research-agent and atlas-agent cannot reach each other's
+vault through any query — not because a filter prevents it, but because
+the path does not exist. The isolation is structural.
+
+---
+
+## Next
+
+**Example 03** introduces persistent memory across sessions — the same
+vault primitive used not for isolation but for long-term agent memory.

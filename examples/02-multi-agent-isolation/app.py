@@ -1,17 +1,20 @@
 """
 LangGraph Multi-Vault Example
 
-Demonstrates privacy-aware multi-agent system with isolated knowledge access.
+Two agents, two restricted vaults. Isolation enforced at the infrastructure
+layer — not through metadata filtering or prompt rules.
 
-Scenario:
-- Public Agent: answers using public research papers
-- Internal Agent: answers using confidential company docs
-- Router: intelligently routes queries based on content
+Agents:
+- research-agent: authorized to query research-vault only
+- atlas-agent:    authorized to query atlas-vault only
+- router:         dispatches queries to the appropriate agent (application
+                  logic, separate from the isolation mechanism)
 
 Run:
     python app.py
 
-Note: Requires OPENAI_API_KEY environment variable
+Requires:
+    OPENAI_API_KEY environment variable
 """
 
 import os
@@ -32,8 +35,11 @@ import time
 API_URL = "http://127.0.0.1:8000/ctxvault"
 VAULTS_DIR = Path(__file__).parent / "vaults"
 
-PUBLIC_VAULT = "public"
-INTERNAL_VAULT = "internal"
+ATLAS_VAULT = "atlas-vault"
+RESEARCH_VAULT = "research-vault"
+
+ATLAS_AGENT_HEADER = {"X-CtxVault-Agent": "atlas-agent"}
+RESEARCH_AGENT_HEADER = {"X-CtxVault-Agent": "research-agent"}
 
 # Colors for CLI
 BLUE = "\033[94m"
@@ -70,19 +76,17 @@ def start_server():
 # CtxVault API helpers
 # =====================================================================
 
-def init_vault(vault_name: str):
-    """Initialize a vault."""
-    requests.post(f"{API_URL}/init", json={"vault_name": vault_name, "vault_path": str(VAULTS_DIR / vault_name)})
-
 def index_vault(vault_name: str):
     """Index documents into vault."""
-    requests.put(f"{API_URL}/index", json={
-        "vault_name": vault_name
-    })
+    requests.put(f"{API_URL}/index",
+        json={"vault_name": vault_name}
+    )
 
 def query_vault(vault_name: str, query: str, top_k: int = 2):
     """Query vault and return results."""
-    response = requests.post(f"{API_URL}/query", json={
+    response = requests.post(f"{API_URL}/query", 
+        headers=ATLAS_AGENT_HEADER if vault_name == ATLAS_VAULT else RESEARCH_AGENT_HEADER,
+        json={
         "vault_name": vault_name,
         "query": query,
         "top_k": top_k
@@ -95,7 +99,7 @@ def query_vault(vault_name: str, query: str, top_k: int = 2):
 
 class AgentState(TypedDict):
     query: str
-    route: Literal["public", "internal"]
+    route: Literal["atlas", "research"]
     context: str
     answer: str
 
@@ -112,42 +116,19 @@ def router_node(state: AgentState) -> AgentState:
                          "internal", "quarterly", "atlas", "financial"]
     
     if any(keyword in query for keyword in internal_keywords):
-        route = "internal"
-        print(f"{YELLOW}[ROUTER] Detected internal query → routing to Internal Agent{RESET}\n")
+        route = "atlas"
+        print(f"{BLUE}[ROUTER] Detected atlas query → routing to Atlas Agent{RESET}\n")
     else:
-        route = "public"
-        print(f"{BLUE}[ROUTER] Detected public query → routing to Public Agent{RESET}\n")
+        route = "research"
+        print(f"{YELLOW}[ROUTER] Detected research query → routing to Research Agent{RESET}\n")
     
     return {"route": route}
 
-def public_agent_node(state: AgentState) -> AgentState:
-    """Handle public queries using public vault."""
-    print(f"{BLUE}[PUBLIC AGENT] Retrieving from public vault...{RESET}")
+def atlas_agent_node(state: AgentState) -> AgentState:
+    """Handle atlas queries using atlas vault."""
+    print(f"{BLUE}[ATLAS AGENT] Retrieving from atlas vault...{RESET}")
     
-    results = query_vault(PUBLIC_VAULT, state["query"])
-    context = "\n\n".join([r["text"] for r in results])
-    
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    
-    messages = [
-        SystemMessage(content="You are a research assistant. Answer using ONLY the provided context."),
-        HumanMessage(content=f"Context:\n{context}\n\nQuestion: {state['query']}")
-    ]
-    
-    response = llm.invoke(messages)
-    
-    print(f"{GREEN}[PUBLIC AGENT] Answer generated{RESET}\n")
-    
-    return {
-        "context": context,
-        "answer": response.content
-    }
-
-def internal_agent_node(state: AgentState) -> AgentState:
-    """Handle internal queries using internal vault."""
-    print(f"{YELLOW}[INTERNAL AGENT] Retrieving from internal vault...{RESET}")
-    
-    results = query_vault(INTERNAL_VAULT, state["query"])
+    results = query_vault(ATLAS_VAULT, state["query"])
     context = "\n\n".join([r["text"] for r in results])
     
     llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
@@ -159,7 +140,30 @@ def internal_agent_node(state: AgentState) -> AgentState:
     
     response = llm.invoke(messages)
     
-    print(f"{GREEN}[INTERNAL AGENT] Answer generated{RESET}\n")
+    print(f"{GREEN}[ATLAS AGENT] Answer generated{RESET}\n")
+    
+    return {
+        "context": context,
+        "answer": response.content
+    }
+
+def research_agent_node(state: AgentState) -> AgentState:
+    """Handle research queries using research vault."""
+    print(f"{YELLOW}[RESEARCH AGENT] Retrieving from research vault...{RESET}")
+    
+    results = query_vault(RESEARCH_VAULT, state["query"])
+    context = "\n\n".join([r["text"] for r in results])
+    
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    
+    messages = [
+        SystemMessage(content="You are a research assistant. Answer using ONLY the provided context."),
+        HumanMessage(content=f"Context:\n{context}\n\nQuestion: {state['query']}")
+    ]
+    
+    response = llm.invoke(messages)
+    
+    print(f"{GREEN}[RESEARCH AGENT] Answer generated{RESET}\n")
     
     return {
         "context": context,
@@ -176,8 +180,8 @@ def create_graph():
     
     # Add nodes
     workflow.add_node("router", router_node)
-    workflow.add_node("public_agent", public_agent_node)
-    workflow.add_node("internal_agent", internal_agent_node)
+    workflow.add_node("atlas_agent", atlas_agent_node)
+    workflow.add_node("research_agent", research_agent_node)
     
     # Define edges
     workflow.set_entry_point("router")
@@ -186,13 +190,13 @@ def create_graph():
         "router",
         lambda x: x["route"],
         {
-            "public": "public_agent",
-            "internal": "internal_agent"
+            "atlas": "atlas_agent",
+            "research": "research_agent"
         }
     )
     
-    workflow.add_edge("public_agent", END)
-    workflow.add_edge("internal_agent", END)
+    workflow.add_edge("atlas_agent", END)
+    workflow.add_edge("research_agent", END)
     
     return workflow.compile()
 
@@ -201,17 +205,12 @@ def create_graph():
 # =====================================================================
 
 def setup_vaults():
-    """Initialize and index both vaults."""
-    print(f"{BLUE}[SETUP] Initializing vaults...{RESET}")
+    """Initialize and index both vaults."""    
+    print(f"{BLUE}[SETUP] Indexing atlas vault...{RESET}")
+    index_vault(ATLAS_VAULT)
     
-    init_vault(PUBLIC_VAULT)
-    init_vault(INTERNAL_VAULT)
-    
-    print(f"{BLUE}[SETUP] Indexing public vault...{RESET}")
-    index_vault(PUBLIC_VAULT)
-    
-    print(f"{YELLOW}[SETUP] Indexing internal vault...{RESET}")
-    index_vault(INTERNAL_VAULT)
+    print(f"{YELLOW}[SETUP] Indexing research vault...{RESET}")
+    index_vault(RESEARCH_VAULT)
     
     print(f"{GREEN}[SETUP] Vaults ready!{RESET}\n")
 

@@ -17,33 +17,126 @@
 
 </div>
 
+---
+
 ## What is CtxVault?
 
-CtxVault is a **local semantic memory layer** for LLM applications. It gives agents persistent, queryable knowledge through isolated **vaults** — independent memory slots that can be assigned per agent, shared across workflows, written autonomously, and monitored manually at any time.
+Most agent frameworks treat memory as an afterthought — a shared vector store queried with metadata filters, where isolation depends entirely on configuration staying correct. It works until it doesn't: multiple agents with different domains, a growing knowledge base, and the wrong document surfaces in the wrong place.
 
-Each vault is self-contained: its own documents, its own vector index, its own history. Run as many as you need — one per agent, one per project, or one shared knowledge base across multiple workflows.
+CtxVault is built around a different primitive. Memory is organized into **vaults** — self-contained, directory-backed units, each with its own documents and its own vector index. Isolation is structural. The topology is defined explicitly: one vault per agent, a shared knowledge base across multiple workflows, or any combination — with access control that determines exactly which agents can reach which vault.
+
+The result is a memory layer that behaves like real infrastructure: composable, observable, persistent and entirely local.
+
+<div align="center">
+  <img 
+    src="https://raw.githubusercontent.com/Filippo-Venturini/ctxvault/main/assets/ctxvault_schema.svg"
+    alt="CtxVault architecture schema"
+    width="1200"
+  >
+</div>
+
+---
+
+## Core Principles
+
+### Structural isolation and access control
+
+Isolation enforced through prompt logic or metadata schemas is fragile — it grows harder to reason about as systems scale, and fails silently when it breaks.
+
+In CtxVault, each vault is an independent index. Agents have no shared retrieval path unless one is explicitly defined. Vaults can be declared restricted, with access granted to specific agents directly through the CLI. The boundary is part of the architecture, not a rule written in a config file that someone might later get wrong.
+
+```
+Found 3 vaults
+
+> agent-a-vault [RESTRICTED]
+  path:    ~/.ctxvault/vaults/agent-a-vault
+  agents:  agent-a
+
+> shared-vault [PUBLIC]
+  path:    ~/.ctxvault/vaults/shared-vault
+
+> agent-c-vault [RESTRICTED]
+  path:    ~/.ctxvault/vaults/agent-c-vault
+  agents:  agent-c
+```
+
+---
+
+### Persistent memory across sessions
+
+Agents lose all context when a session ends. CtxVault gives them a knowledge base that persists across conversations, queryable by meaning rather than exact match. Context written in one session is retrievable days later using semantically related language.
 
 <div align="center">
   <img 
     src="https://raw.githubusercontent.com/Filippo-Venturini/ctxvault/main/assets/ctxvault-demo.gif" 
-    alt="Claude Desktop using ctxvault MCP server — agent saves and recalls context across sessions"
+    alt="Agent saves context in session one — new chat, new session, memory intact"
     width="1200"
   >
   <p><sub>Persistent memory across sessions — shown with Claude Desktop, works with any MCP-compatible client.</sub></p>
 </div>
 
-**Local-first** — No cloud, no telemetry, no external dependencies. Your knowledge base runs entirely on your machine.
+---
 
-**Multi-Vault Architecture** — Isolated memory slots for different contexts. One per agent, shared across a team, or split by domain — your call.
+### Observable and human-controllable
 
-**Three Integration Modes** — **CLI** for manual use and monitoring. **HTTP API** for programmatic integration with LangChain, LangGraph, and custom pipelines. **MCP** server for agents that manage their own memory autonomously, with no code required.
+When agents write to memory autonomously, visibility into what they write is not a debugging feature — it is the foundation of a trustworthy system.
 
-**Always Observable** — Agents write and query autonomously via MCP or API, while you retain full visibility and control through the CLI.
+Every vault is a plain directory on your machine. You can read it, edit it, and query it directly through the CLI at any point, independent of what any agent is doing. You also contribute to the same memory layer directly: drop documents into a vault, index with one command, and the agent queries that knowledge alongside what it has written on its own.
 
-<div align="center">
-  <img alt="Multiple agents and applications sharing isolated vaults through a single local layer" src="https://raw.githubusercontent.com/Filippo-Venturini/ctxvault/main/assets/architectural_schema.png" width="350">
-</div>
-<p align="center"><sub>One layer. Multiple agents, apps, and vaults.</sub></p>
+```bash
+# Inspect what your agent has written in the vault
+ctxvault list my-vault
+
+# Query its knowledge base directly  
+ctxvault query my-vault "what decisions were made last week?"
+
+# Add your own documents and index them
+ctxvault index my-vault
+```
+
+---
+
+### Local-first
+
+No cloud, no telemetry, no external services. Vaults are plain directories on your machine, the storage layer is entirely local. What you connect to that knowledge base is your choice.
+
+---
+
+## Integration Modes
+
+CtxVault exposes the same vault layer through three interfaces. Use whichever fits your context, or combine them freely.
+
+**CLI** — Human-facing. Monitor vaults, inspect agent-written content, add your own documents, query knowledge bases directly.
+
+**HTTP API** — Programmatic integration. Connect LangChain, LangGraph, or any custom pipeline to vaults via REST. Full CRUD, semantic search, and agent write support.
+
+**MCP server** — For autonomous agents. Give any MCP-compatible client direct vault access with no integration code required. The agent handles `list_vaults`, `query`, `write`, and `list_docs` on its own.
+
+---
+
+## CtxVault vs Alternatives
+
+| | CtxVault | ChromaDB + custom | LangChain Memory | Mem0 |
+|--|----------|-------------------|------------------|------|
+| Vault isolation | ✓ | ✗ — you build it | ✗ | ✗ |
+| Access control | ✓ | ✗ — you build it | ✗ | ✗ |
+| Agent-written memory | ✓ | ✗ — you build it | Partial | Partial |
+| Human CLI observability | ✓ | ✗ | ✗ | ✗ |
+| Local-first | ✓ | ✓ | ✓ | ✗ (cloud) |
+| MCP server | ✓ | ✗ — you build it | ✗ | ✗ |
+
+---
+
+## Examples
+
+Three scenarios — each with full code and setup instructions.
+
+| | Example | What it shows |
+|--|---------|---------------|
+| 🟢 | [**Personal Research Assistant**](examples/01-simple-rag/) | Single vault, single agent. Semantic RAG over PDF, MD, TXT, DOCX with source attribution. ~100 lines.  |
+| 🔴 | [**Multi-Agent Isolation**](examples/02-multi-agent-isolation/) | Two agents, two vaults. Each agent has no retrieval path to the other's vault — isolation enforced at the infrastructure layer, not through metadata filtering. ~200 lines.|
+| 🔵 | [**Persistent Memory Agent**](examples/03-persistent-memory/) | An agent that recalls context across sessions using semantic queries. "financial constraints" retrieves "cut cloud costs by 15%" written three days prior. |
+| 🟡 | [**Composed Topology**](examples/04-composed-topology/) | Three agents, five vaults — private, shared between a subset, and public. A tiered support system where access boundaries reflect organizational boundaries. |
 
 ---
 
@@ -157,40 +250,19 @@ uv tool install ctxvault
 
 Restart your client. The agent can now query your existing vaults, write new context, and list available knowledge — all locally, all under your control.
 
----
+**Restricted vaults:** if you are integrating programmatically and need to access a restricted vault, pass the agent name at startup:
+```json
+{
+  "mcpServers": {
+    "ctxvault": {
+      "command": "ctxvault-mcp",
+      "args": ["--agent", "my-agent"]
+    }
+  }
+}
+```
 
-## Examples
-
-Three production-ready scenarios — each with full code and setup instructions.
-
-| | Example | What it shows |
-|--|---------|---------------|
-| 🟢 | [**01 · Personal Research Assistant**](examples/01-simple-rag/) | Semantic RAG over PDF, MD, TXT, DOCX. Ask questions, get cited answers. ~100 lines. |
-| 🔴 | [**02 · Multi-Agent Isolation**](examples/02-multi-agent-isolation/) | Two agents, two vaults, one router. The public agent *cannot* access internal docs — privacy enforced at the knowledge layer. ~200 lines. |
-| 🔵 | [**03 · Persistent Memory Agent**](examples/03-persistent-memory/) | Agent that recalls context across sessions with fuzzy semantic queries. "financial constraints" finds "cost cuts" from 3 days ago. |
-
----
-
-## CtxVault vs Alternatives
-
-| Feature | CtxVault | Pinecone/Weaviate | LangChain VectorStores | Mem0/Zep |
-|---------|----------|-------------------|------------------------|----------|
-| **Local-first** | ✓ | ✗ (cloud) | ✓ | ✗ (cloud APIs) |
-| **Multi-vault** | ✓ | ✗ | ✗ | Partial |
-| **CLI + API** | ✓ | API only | Code only | API only |
-| **Zero config** | ✓ | ✗ (setup required) | ✗ (code integration) | ✗ (external service) |
-| **Agent write support** | ✓ | ✓ | ✗ | ✓ |
-| **Privacy** | 100% local | Cloud | Depends on backend | Cloud |
-
-**When to use CtxVault:**
-- You need local-first semantic search
-- Multiple isolated knowledge contexts
-- Simple setup without external services
-- Integration with LangChain/LangGraph workflows
-
-**When to use alternatives:**
-- Cloud-native architecture required
-- Already invested in specific cloud ecosystem
+The `--agent` argument is optional and only required for restricted vaults.
 
 ---
 
@@ -203,19 +275,76 @@ All commands require a vault name. Default vault location: `~/.ctxvault/vaults/<
 ---
 
 #### `init`
-Initialize a new vault.
+Initialize a new vault. Vaults are public by default — any agent can access them.
+Pass `--restricted` to create a restricted vault, accessible only to explicitly
+attached agents.
 ```bash
-ctxvault init <name> [--path <path>]
+ctxvault init <name> [--path <path>] [--restricted]
 ```
 
 **Arguments:**
 - `<name>` - Vault name (required)
 - `--path <path>` - Custom vault location (optional, default: `~/.ctxvault/vaults/<name>`)
+- `--restricted` - Create vault as restricted (optional, default: public)
 
 **Example:**
 ```bash
 ctxvault init my-vault
 ctxvault init my-vault --path /data/vaults
+ctxvault init my-vault --restricted
+```
+
+---
+
+#### `attach`
+Attach an agent to a vault, granting it access. If the vault is public, attaching
+an agent automatically makes it restricted — only explicitly attached agents will
+be able to access it from that point on.
+```bash
+ctxvault attach <vault> <agent>
+```
+
+**Arguments:**
+- `<vault>` - Vault name (required)
+- `<agent>` - Agent name (required)
+
+**Example:**
+```bash
+ctxvault attach my-vault my-agent
+```
+
+---
+
+#### `detach`
+Remove an agent's access from a restricted vault.
+```bash
+ctxvault detach <vault> <agent>
+```
+
+**Arguments:**
+- `<vault>` - Vault name (required)
+- `<agent>` - Agent name (required)
+
+**Example:**
+```bash
+ctxvault detach my-vault my-agent
+```
+
+---
+
+#### `publish`
+Make a restricted vault public, removing all access restrictions and granting
+access to any agent.
+```bash
+ctxvault publish <vault>
+```
+
+**Arguments:**
+- `<vault>` - Vault name (required)
+
+**Example:**
+```bash
+ctxvault publish my-vault
 ```
 
 ---
@@ -255,10 +384,10 @@ ctxvault query my-vault "attention mechanisms"
 
 ---
 
-#### `list`
-List all indexed documents in vault.
+#### `docs`
+List all indexed documents in a vault.
 ```bash
-ctxvault list <vault>
+ctxvault docs <vault>
 ```
 
 **Arguments:**
@@ -266,13 +395,22 @@ ctxvault list <vault>
 
 **Example:**
 ```bash
-ctxvault list my-vault
+ctxvault docs my-vault
+```
+```
+Found 2 documents in 'my-vault'
+
+  1. paper.pdf
+     .pdf · 12 chunks
+
+  2. notes.md
+     .md · 3 chunks
 ```
 
 ---
 
 #### `delete`
-Remove document from vault.
+Remove a document from a vault.
 ```bash
 ctxvault delete <vault> --path <path>
 ```
@@ -289,7 +427,7 @@ ctxvault delete my-vault --path paper.pdf
 ---
 
 #### `reindex`
-Re-index documents in vault.
+Re-index documents in a vault.
 ```bash
 ctxvault reindex <vault> [--path <path>]
 ```
@@ -307,7 +445,7 @@ ctxvault reindex my-vault --path docs/
 ---
 
 #### `vaults`
-List all vaults and their paths.
+List all vaults with their paths and access configuration.
 ```bash
 ctxvault vaults
 ```
@@ -316,23 +454,30 @@ ctxvault vaults
 ```bash
 ctxvault vaults
 ```
+```
+Found 2 vaults
+> atlas-vault [RESTRICTED]
+  path:    ~/.ctxvault/vaults/atlas-vault
+  agents:  atlas-agent
+
+> research-vault [PUBLIC]
+  path:    ~/.ctxvault/vaults/research-vault
+```
 
 ---
 
 **Vault management:**
 - Default location: `~/.ctxvault/vaults/<vault-name>/`
-- Vault registry: `~/.ctxvault/config.json` tracks all vault names and their paths
-- Custom paths: Use `--path` flag during `init` to create vault at custom location
-- All other commands use vault name (path lookup via config.json)
+- Vault registry: `~/.ctxvault/config.json` tracks all vault names, paths, and access configuration
+- Custom paths: use `--path` during `init` to create vault at a custom location
+- All other commands reference vaults by name — path lookup is handled via `config.json`
 
-**Multi-vault support:**
-```bash
-# Work with specific vault
-ctxvault research query "topic"
-
-# Default vault location: ~/.ctxvault/vaults/
-# Override with --path for custom locations
-```
+**Access control:**
+- Vaults are public by default — any agent can access them
+- `init --restricted` or `attach` make a vault restricted
+- Once restricted, only explicitly attached agents can access it
+- `publish` reverts a restricted vault to public
+- Access is enforced server-side on every request — not in application code
 
 ---
 
@@ -349,7 +494,26 @@ ctxvault research query "topic"
 | `/docs` | GET | List indexed documents |
 | `/delete` | DELETE | Remove document from vault |
 | `/reindex` | PUT | Re-index entire vault or specific path |
-| `/vaults` | GET | List all the initialized vaults |
+| `/vaults` | GET | List all initialized vaults |
+
+**Agent authorization:**
+
+Requests to `/query`, `/write`, `/docs`, `/delete`, and `/reindex` on a restricted
+vault require the `X-CtxVault-Agent` header. The value must match an agent name
+attached to that vault via `ctxvault attach`. Requests without the header, or with
+an unrecognized agent name, return `403`.
+```http
+X-CtxVault-Agent: my-agent
+```
+```python
+requests.post("http://127.0.0.1:8000/ctxvault/query",
+    headers={"X-CtxVault-Agent": "my-agent"},
+    json={"vault_name": "my-vault", "query": "attention mechanisms", "top_k": 3}
+)
+```
+
+Requests to public vaults do not require the header. `/init` and `/vaults` never
+require it.
 
 **Interactive documentation:** Start the server and visit `http://127.0.0.1:8000/docs`
 
@@ -362,8 +526,9 @@ ctxvault research query "topic"
 - [x] Multi-vault support
 - [x] Agent write API
 - [x] MCP server support
+- [x] Access control
 - [ ] File watcher / auto-sync
-- [ ] Hybrid search (semantic + keyword)
+- [ ] Context pruning
 - [ ] Configurable embedding models
 
 ---
