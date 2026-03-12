@@ -22,6 +22,14 @@ def _find_local_root() -> Path | None:
             return None
         current = current.parent
 
+def _resolve_local_paths(local_config: dict, local_root: Path) -> dict:
+    project_root = local_root.parent
+    for vault_data in local_config["vaults"].values():
+        if not Path(vault_data["vault_path"]).is_absolute():
+            vault_data["vault_path"] = str((project_root / vault_data["vault_path"]).resolve())
+            vault_data["db_path"] = str((project_root / vault_data["db_path"]).resolve())
+    return local_config
+
 def _load_config() -> tuple[dict, dict, Path | None]:
     if not _config_file(GLOBAL_DIR).exists():
         GLOBAL_DIR.mkdir(exist_ok=True)
@@ -34,6 +42,7 @@ def _load_config() -> tuple[dict, dict, Path | None]:
 
     if local_root is not None:
         local_config = json.loads(_config_file(local_root).read_text())
+        local_config = _resolve_local_paths(local_config, local_root)
     else:
         local_config = {"vaults": {}}
 
@@ -49,41 +58,56 @@ def _get_vault_scope(vault_name: str, global_config: dict, local_config: dict) -
         return "global"
     return None
 
-def create_vault(vault_name: str, restricted: bool, vault_path: str) -> tuple[str, str]:
-    is_local = vault_path is not None
+def create_vault(vault_name: str, restricted: bool, vault_path: str, global_vault: bool = False) -> tuple[str, str]:
 
-    if is_local:
-        local_root = (Path(vault_path) / CTXVAULT_DIR_NAME).resolve()
-        local_root.mkdir(exist_ok=True)
-        if _config_file(local_root).exists():
-            config = json.loads(_config_file(local_root).read_text())
-        else:
-            config = {"vaults": {}}
-        vault_path = _vaults_dir(local_root) / vault_name
-        save_root = local_root
-    else:
+    if global_vault:
         global_config, _, _ = _load_config()
         config = global_config
         vault_path = _vaults_dir(GLOBAL_DIR) / vault_name
         save_root = GLOBAL_DIR
 
-    if vault_name in config["vaults"]:
-        raise VaultAlreadyExistsError(f"Vault '{vault_name}' already exists.")
+        if vault_name in config["vaults"]:
+            raise VaultAlreadyExistsError(f"Vault '{vault_name}' already exists.")
 
-    db_path = vault_path / "chroma"
-    vault_path.mkdir(parents=True, exist_ok=True)
-    db_path.mkdir(parents=True, exist_ok=True)
+        db_path = vault_path / "chroma"
+        vault_path.mkdir(parents=True, exist_ok=True)
+        db_path.mkdir(parents=True, exist_ok=True)
 
-    config["vaults"][vault_name] = {
-        "vault_path": vault_path.as_posix(),
-        "db_path": db_path.as_posix(),
-        "restricted": restricted,
-        "allowed_agents": []
-    }
+        config["vaults"][vault_name] = {
+            "vault_path": vault_path.as_posix(),
+            "db_path": db_path.as_posix(),
+            "restricted": restricted,
+            "allowed_agents": []
+        }
+    else:
+        local_root = (Path.cwd() / CTXVAULT_DIR_NAME).resolve()
+        local_root.mkdir(exist_ok=True)
+        if _config_file(local_root).exists():
+            config = json.loads(_config_file(local_root).read_text())
+        else:
+            config = {"vaults": {}}
+
+        vault_path_abs = (Path(vault_path) / "vaults" / vault_name).resolve() if vault_path else _vaults_dir(local_root) / vault_name
+        save_root = local_root
+
+        if vault_name in config["vaults"]:
+            raise VaultAlreadyExistsError(f"Vault '{vault_name}' already exists.")
+
+        db_path = vault_path_abs / "chroma"
+        vault_path_abs.mkdir(parents=True, exist_ok=True)
+        db_path.mkdir(parents=True, exist_ok=True)
+
+        project_root = local_root.parent
+        config["vaults"][vault_name] = {
+            "vault_path": vault_path_abs.relative_to(project_root).as_posix(),
+            "db_path": db_path.relative_to(project_root).as_posix(),
+            "restricted": restricted,
+            "allowed_agents": []
+        }
 
     _save_config(data=config, root=save_root)
 
-    return str(vault_path), str(_config_file(save_root))
+    return str(vault_path_abs if not global_vault else vault_path), str(_config_file(save_root))
 
 def get_vaults() -> list[dict]:
     global_config, local_config, _ = _load_config()

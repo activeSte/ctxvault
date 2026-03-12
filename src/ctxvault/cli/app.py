@@ -25,10 +25,10 @@ def _print_vault(v: dict):
     typer.echo("")
 
 @app.command()
-def init(name: str = typer.Argument("my-vault"), restricted: bool = typer.Option(False, "--restricted"), path: str = typer.Option(None, "--path")):
+def init(name: str = typer.Argument("my-vault"), restricted: bool = typer.Option(False, "--restricted"), path: str = typer.Option(None, "--path"), global_vault: bool = typer.Option(False, "--global")):
     try:
         typer.echo(f"Initializing Context Vault {name}...")
-        vault_path, config_path = vault.init_vault(vault_name=name, restricted=restricted, path=path)
+        vault_path, config_path = vault.init_vault(vault_name=name, restricted=restricted, path=path, global_vault=global_vault)
         typer.secho("Context Vault initialized succesfully!", fg=typer.colors.GREEN, bold=True)
         typer.echo(f"Context Vault path: {vault_path}")
         typer.echo(f"Config file path: {config_path}")

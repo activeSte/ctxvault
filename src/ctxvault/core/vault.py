@@ -51,8 +51,8 @@ def make_public(vault_name: str) -> None:
 def purge_vault(vault_name: str) -> None:
     delete_vault(vault_name=vault_name)
 
-def init_vault(vault_name: str, restricted: bool = False, path: str | None = None)-> tuple[str, str]:
-    vault_path, config_path = create_vault(vault_name=vault_name, restricted=restricted, vault_path=path)
+def init_vault(vault_name: str, restricted: bool = False, path: str | None = None, global_vault: bool = False)-> tuple[str, str]:
+    vault_path, config_path = create_vault(vault_name=vault_name, restricted=restricted, vault_path=path, global_vault=global_vault)
     return str(vault_path), config_path
 
 def iter_files(path: Path, exclude_dirs: list[Path] | None = None):

@@ -1,0 +1,1 @@
+{"vaults": {"assistant-memory": {"vault_path": ".ctxvault/vaults/assistant-memory", "db_path": ".ctxvault/vaults/assistant-memory/chroma", "restricted": false, "allowed_agents": []}}}

@@ -69,12 +69,6 @@ def start_server():
 def api(method: str, path: str, **kwargs):
     return requests.request(method, f"{API_URL}/ctxvault{path}", timeout=None, **kwargs)
 
-def init_vault():
-    """Initialize empty vault for assistant memory."""
-    print(f"{BLUE}[SETUP] Initializing memory vault '{VAULT_NAME}'...{RESET}")
-    api("POST", "/init", json={"vault_name": VAULT_NAME, "vault_path": str(BASE_DIR / VAULT_NAME)})
-    print(f"{GREEN}[SETUP] Vault initialized{RESET}\n")
-
 def write_to_vault(filename: str, content: str):
     """Write session memory to vault."""
     
@@ -324,9 +318,7 @@ def main():
     
     server = start_server()
     
-    try:
-        init_vault()
-        
+    try:        
         session_1()
         time.sleep(1)
         

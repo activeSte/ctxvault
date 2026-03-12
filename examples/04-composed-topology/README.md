@@ -56,19 +56,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY=your_key
 ```
 
-### 2. Declare the vault topology
-Run the setup script — works on all platforms:
-```bash
-python setup.py
-```
-
-This initializes all five vaults and declares access control via CLI.
-To inspect the resulting topology:
-```bash
-ctxvault vaults
-```
-
-### 3. Inspect the topology
+### 2. Inspect the topology
 ```bash
 ctxvault vaults
 ```
@@ -96,7 +84,7 @@ Found 5 vaults
   agents:  l2-agent, l3-agent
 ```
 
-### 4. Run
+### 3. Run
 ```bash
 python app.py
 ```
@@ -128,16 +116,18 @@ from tech-vault.
 04-composed-topology/
 ├── app.py
 ├── requirements.txt
-└── vaults/
-    ├── public-vault/
-    │   ├── faq.md
-    │   └── product-docs.md
-    ├── l1-vault/
-    │   └── l1-procedures.md
-    ├── l2-vault/
-    │   └── l2-procedures.md
-    ├── l3-vault/
-    │   └── l3-runbooks.md
-    └── tech-vault/
-        └── known-issues.md
+├── .ctxvault/
+    ├── config.json
+    └── vaults/
+        ├── public-vault/
+        │   ├── faq.md
+        │   └── product-docs.md
+        ├── l1-vault/
+        │   └── l1-procedures.md
+        ├── l2-vault/
+        │   └── l2-procedures.md
+        ├── l3-vault/
+        │   └── l3-runbooks.md
+        └── tech-vault/
+            └── known-issues.md
 ```
