@@ -41,19 +41,7 @@ pip install -r requirements.txt
 export OPENAI_API_KEY=your_key
 ```
 
-### 2. Declare the vault topology
-```bash
-ctxvault init atlas-vault --path vaults/atlas-vault
-ctxvault init research-vault --path vaults/research-vault
-
-ctxvault attach atlas-vault atlas-agent
-ctxvault attach research-vault research-agent
-```
-
-This is the only place access control is declared. The code does not
-enforce it — the infrastructure does.
-
-### 3. Inspect the topology
+### 2. Inspect the topology
 
 Before running the application, verify the vault configuration:
 ```bash
@@ -63,6 +51,7 @@ ctxvault vaults
 
 Found 2 vaults
 
+── local ──────────────────────────
 > atlas-vault [RESTRICTED]
   path:    .../vaults/atlas-vault
   allowed agents:  atlas-agent
@@ -76,7 +65,7 @@ The access control is already in effect. Neither agent can reach the
 other's vault — this is visible and verifiable independently of the
 application code.
 
-### 4. Run
+### 3. Run
 ```bash
 python app.py
 ```

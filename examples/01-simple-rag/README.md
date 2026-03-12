@@ -43,12 +43,15 @@ python app.py
 ## Project structure
 ```
 01-simple-rag/
-├── docs/                      # Document collection
-│   ├── rag_survey_paper.pdf
-│   ├── personal_notes.md
-│   ├── blog_article.txt
-│   └── rag_comparison.txt
-├── app.py                     # RAG pipeline (~100 lines)
+├── .ctxvault/                        # Pinned vault config (commit this)
+│   ├── config.json
+│   └── vaults/
+│       └── personal-vault/
+│           ├── rag_survey_paper.pdf
+│           ├── personal_notes.md
+│           ├── blog_article.txt
+│           └── rag_comparison.txt
+├── app.py                            # RAG pipeline (~100 lines)
 └── requirements.txt
 ```
 

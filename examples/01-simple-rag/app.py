@@ -30,7 +30,7 @@ from langchain_openai import ChatOpenAI
 
 API_URL = "http://127.0.0.1:8000"
 BASE_DIR = Path(__file__).parent
-VAULT_NAME = "research-vault"
+VAULT_NAME = "personal-vault"
 
 # ANSI colors for CLI
 BLUE = "\033[94m"
@@ -70,11 +70,7 @@ def api(method: str, path: str, **kwargs):
     return requests.request(method, f"{API_URL}/ctxvault{path}", timeout=None, **kwargs)
 
 def setup_vault():
-    """Initialize vault and index documents."""
-    print(f"{BLUE}[SETUP] Initializing vault '{VAULT_NAME}'...{RESET}")
-    api("POST", "/init", json={"vault_name": VAULT_NAME, "vault_path": str(BASE_DIR / VAULT_NAME)})
-    print(f"{GREEN}[SETUP] Vault initialized{RESET}\n")
-    
+    """Initialize vault and index documents."""    
     print(f"{BLUE}[SETUP] Indexing research documents...{RESET}")
 
     api("PUT", "/index", json={"vault_name": VAULT_NAME})

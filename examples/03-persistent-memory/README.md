@@ -68,6 +68,10 @@ and synthesizes the week's themes, decisions, and next steps.
 ## Project structure
 ```
 03-persistent-memory/
+├── .ctxvault/
+│   ├── config.json
+│   └── vaults/
+│       └── assistant-memory/
 ├── app.py
 └── requirements.txt
 ```

@@ -1,0 +1,18 @@
+{
+    "vaults": {
+        "atlas-vault": {
+            "vault_path": ".ctxvault/vaults/atlas-vault",
+            "db_path": ".ctxvault/vaults/atlas-vault/chroma",
+            "restricted": true,
+            "allowed_agents": [
+                "atlas-agent"
+            ]
+        },
+        "research-vault": {
+            "vault_path": ".ctxvault/vaults/research-vault",
+            "db_path": ".ctxvault/vaults/research-vault/chroma",
+            "restricted": false,
+            "allowed_agents": []
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "vaults": {
+        "personal-vault": {
+            "vault_path": ".ctxvault/vaults/personal-vault",
+            "db_path": ".ctxvault/vaults/personal-vault/chroma",
+            "restricted": false,
+            "allowed_agents": []
+        }
+    }
+}
