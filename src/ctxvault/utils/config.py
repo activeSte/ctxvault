@@ -53,7 +53,7 @@ def create_vault(vault_name: str, restricted: bool, vault_path: str) -> tuple[st
     is_local = vault_path is not None
 
     if is_local:
-        local_root = Path.cwd() / CTXVAULT_DIR_NAME
+        local_root = (Path(vault_path) / CTXVAULT_DIR_NAME).resolve()
         local_root.mkdir(exist_ok=True)
         if _config_file(local_root).exists():
             config = json.loads(_config_file(local_root).read_text())
