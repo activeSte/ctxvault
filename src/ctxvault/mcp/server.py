@@ -83,15 +83,15 @@ def list_docs(vault_name: str) -> ListDocsResponse:
         raise ValueError(e)
     
 @mcp.tool(description="Create and store a new skill in a skill vault. Use this to persist procedural knowledge, instructions, or how-to guides that agents can retrieve and execute later. The skill will be indexed by name and description for fast lookup. Use this only with skill vaults.")
-def write_skill(write_request: WriteSkillRequest, overwrite: bool = False)-> WriteSkillResponse:
+def write_skill(vault_name: str, skill_name: str, description: str, instructions: str, overwrite: bool = False)-> WriteSkillResponse:
     try:
-        check_access(write_request.vault_name, AGENT_ID)
-        skill_input = SkillInput(name=write_request.skill_name, description=write_request.description, instructions=write_request.instructions)
-        filename = vault_router.write_skill(vault_name=write_request.vault_name, skill = skill_input, overwrite=overwrite)
+        check_access(vault_name, AGENT_ID)
+        skill_input = SkillInput(name=skill_name, description=description, instructions=instructions)
+        filename = vault_router.write_skill(vault_name=vault_name, skill = skill_input, overwrite=overwrite)
         
         return WriteSkillResponse(filename=filename)
     except VaultNotFoundError as e:
-        raise ValueError(f"Vault '{write_request.vault_name}' does not exist.")
+        raise ValueError(f"Vault '{vault_name}' does not exist.")
     except (VaultNotInitializedError, FileOutsideVaultError, UnsupportedFileTypeError, FileTypeNotPresentError) as e:
         raise ValueError(f"Error writing file: {e}")
     except FileAlreadyExistError as e:
@@ -115,7 +115,7 @@ def list_skills(vault_name: str) -> ListSkillsResponse:
 @mcp.tool(description="")
 def read_skill(vault_name: str, skill_name: str)-> SkillResponse:
     try:
-        check_access(vault_name=AGENT_ID)
+        check_access(vault_name, AGENT_ID)
         skill = vault_router.read_skill(vault_name=vault_name, skill_name=skill_name)
         return SkillResponse(skill=skill)
     except VaultNotFoundError as e:

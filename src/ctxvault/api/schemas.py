@@ -5,6 +5,8 @@ from pydantic import BaseModel
 
 class VaultInfo(BaseModel):
     name: str
+    type: VaultType
+    scope: str
     vault_path: str
     restricted: bool
     allowed_agents: list[str] | None = None

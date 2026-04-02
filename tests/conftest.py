@@ -1,8 +1,8 @@
-from ctxvault.models.vaults import VaultType
+from ctxvault.models.vaults import VaultType, SkillInput
 from ctxvault.utils.config import create_vault
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 @pytest.fixture(autouse=True)
 def mock_chroma(monkeypatch):
@@ -49,31 +49,47 @@ def mock_chroma(monkeypatch):
 @pytest.fixture
 def mock_global_config(tmp_path, monkeypatch):
     config_dir = tmp_path / ".ctxvault"
-
     monkeypatch.setattr("ctxvault.utils.config.GLOBAL_DIR", config_dir)
     monkeypatch.setattr("ctxvault.utils.config._find_local_root", lambda: None)
     monkeypatch.chdir(tmp_path)
-
     return config_dir
 
 @pytest.fixture
 def mock_vault_not_initialized(mock_global_config, tmp_path):
     vault_path = tmp_path / "orphan_vault"
     vault_path.mkdir()
-
     return vault_path
 
 @pytest.fixture
 def mock_vault_config(mock_global_config):
-    vault_name = "test_vault"
-    vault_path, config_path = create_vault(vault_name, VaultType.SEMANTIC, False, None, global_vault=True)
+    vault_path, config_path = create_vault("test_vault", VaultType.SEMANTIC, False, None, global_vault=True)
+    return Path(vault_path)
+
+@pytest.fixture
+def mock_skill_vault_config(mock_global_config):
+    vault_path, _ = create_vault("test_skill_vault", VaultType.SKILL, False, None, global_vault=True)
     return Path(vault_path)
 
 @pytest.fixture
 def temp_docs(mock_vault_config):
-    vault_path = mock_vault_config
-    docs = vault_path / "docs"
+    docs = mock_vault_config / "docs"
     docs.mkdir()
     (docs / "file1.txt").write_text("Content of file 1")
     (docs / "file2.txt").write_text("Content of file 2")
     return docs
+
+@pytest.fixture
+def temp_skills(mock_skill_vault_config):
+    skill_1 = mock_skill_vault_config / "write-tests.md"
+    skill_1.write_text("---\nname: Write Tests\ndescription: How to write unit tests\n---\nAlways use pytest.")
+    skill_2 = mock_skill_vault_config / "code-review.md"
+    skill_2.write_text("---\nname: Code Review\ndescription: How to review code\n---\nCheck for clarity first.")
+    return mock_skill_vault_config
+
+@pytest.fixture
+def sample_skill_input():
+    return SkillInput(
+        name="Deploy Service",
+        description="How to deploy a service",
+        instructions="Run docker build then docker push."
+    )
