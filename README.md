@@ -5,8 +5,8 @@
     <img alt="Logo" src="https://raw.githubusercontent.com/Filippo-Venturini/ctxvault/main/assets/logo_black_text.svg" width="400" height="100">
 </picture>
 
-<h3>Local semantic memory infrastructure for AI agents</h3>
-<p><i>Isolated vaults. Agent-autonomous. Human-observable.</i></p>
+<h3>Local memory infrastructure for AI agents</h3>
+<p><i>Isolated vaults. Typed memory. Agent-autonomous. Human-observable.</i></p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI version](https://img.shields.io/pypi/v/ctxvault.svg)](https://pypi.org/project/ctxvault/)
