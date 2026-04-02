@@ -6,12 +6,16 @@
 
       .flow  { stroke-dasharray: 8 4; animation: flow 1.4s linear infinite 0.00s; }
       .flow2 { stroke-dasharray: 8 4; animation: flow 1.4s linear infinite 0.40s; }
-      .ret   { stroke-dasharray: 4 4; animation: flow 1.8s linear infinite 0.00s; }
-      .ret2  { stroke-dasharray: 4 4; animation: flow 1.8s linear infinite 0.60s; }
-      .out   { stroke-dasharray: 4 4; animation: flow 1.8s linear infinite 0.30s; }
+      .ret   { stroke-dasharray: 4 4; animation: retflow 1.4s linear infinite 0.00s; }
+      .ret2  { stroke-dasharray: 4 4; animation: retflow 1.4s linear infinite 0.60s; }
+      .out   { stroke-dasharray: 4 4; animation: retflow 1.4s linear infinite 0.30s; }
 
       @keyframes flow {
         from { stroke-dashoffset: 12; }
+        to   { stroke-dashoffset: 0; }
+      }
+      @keyframes retflow {
+        from { stroke-dashoffset: 8; }
         to   { stroke-dashoffset: 0; }
       }
     </style>
@@ -42,26 +46,26 @@
   <text x="360" y="124" text-anchor="middle" fill="#1a1a1a" font-size="11" font-weight="500">agent</text>
 
   <!-- LEFT SIDE: semantic vault -->
-  <!-- Down: query from agent (x=280) to vault outer edge (x=100) -->
-  <path d="M 280 142 L 280 165 L 100 165 L 100 210"
-        fill="none" stroke="#7a9bb5" stroke-width="1.5" marker-end="url(#arr-blue)" class="flow"/>
-  <text x="115" y="161" text-anchor="start" fill="#7a9bb5" font-size="8" font-weight="500">query</text>
+  <!-- Down: query vertical from agent (x=320) to vault (x=320) -->
+  <line x1="320" y1="142" x2="320" y2="210"
+        stroke="#7a9bb5" stroke-width="1.5" marker-end="url(#arr-blue)" class="flow"/>
+  <text x="315" y="180" text-anchor="end" fill="#7a9bb5" font-size="8" font-weight="500">query</text>
 
-  <!-- Up: knowledge from vault (x=320) straight up to agent (x=320) -->
-  <line x1="320" y1="210" x2="320" y2="142"
+  <!-- Up: knowledge vertical from vault (x=260) to agent (x=260) -->
+  <line x1="260" y1="210" x2="260" y2="142"
         stroke="#7a9bb5" stroke-width="1.2" marker-end="url(#arr-blue)" class="ret"/>
-  <text x="325" y="180" fill="#7a9bb5" font-size="7.5" font-weight="500">knowledge</text>
+  <text x="255" y="180" text-anchor="end" fill="#7a9bb5" font-size="8" font-weight="500">knowledge</text>
 
   <!-- RIGHT SIDE: skill vault -->
-  <!-- Down: read_skill from agent (x=440) to vault outer edge (x=620) -->
-  <path d="M 440 142 L 440 165 L 620 165 L 620 210"
-        fill="none" stroke="#b5946a" stroke-width="1.5" marker-end="url(#arr-amber)" class="flow2"/>
-  <text x="505" y="161" text-anchor="start" fill="#b5946a" font-size="8" font-weight="500">read_skill</text>
+  <!-- Down: read_skill vertical from agent (x=400) to vault (x=400) -->
+  <line x1="400" y1="142" x2="400" y2="210"
+        stroke="#b5946a" stroke-width="1.5" marker-end="url(#arr-amber)" class="flow2"/>
+  <text x="405" y="180" fill="#b5946a" font-size="8" font-weight="500">read_skill</text>
 
-  <!-- Up: instructions from vault (x=400) straight up to agent (x=400) -->
-  <line x1="400" y1="210" x2="400" y2="142"
+  <!-- Up: instructions vertical from vault (x=460) to agent (x=460) -->
+  <line x1="460" y1="210" x2="460" y2="142"
         stroke="#b5946a" stroke-width="1.2" marker-end="url(#arr-amber)" class="ret2"/>
-  <text x="405" y="180" fill="#b5946a" font-size="7.5" font-weight="500">instructions</text>
+  <text x="465" y="180" fill="#b5946a" font-size="8" font-weight="500">instructions</text>
 
   <!-- SEMANTIC VAULT -->
   <rect x="60" y="212" width="270" height="130" rx="8" fill="#f0f4f8" stroke="#c8c8c4" stroke-width="1.5"/>
