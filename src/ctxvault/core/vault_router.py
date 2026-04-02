@@ -3,7 +3,7 @@ from ctxvault.core.vaults.semantic import SemanticVault
 from ctxvault.core.vaults.skill import SkillVault
 from ctxvault.models.documents import SemanticDocumentInfo, SkillDocumentInfo
 from ctxvault.models.query_result import QueryResult
-from ctxvault.models.vaults import Skill, VaultOperation, VaultType
+from ctxvault.models.vaults import SkillOutput, SkillInput, VaultOperation, VaultType
 from ctxvault.utils.config import create_vault, get_vault_config, get_vaults
 
 def _get_vault(vault_name: str):
@@ -75,10 +75,15 @@ def reindex_files(vault_name: str, path: str | None = None)-> tuple[list[str], l
     vault._require_operation(VaultOperation.REINDEX)
     return vault.reindex_files(path=path)
 
-def write_file(vault_name: str, file_path: str, content: str, overwrite: bool = True, agent_metadata: dict | None = None)-> None:
+def write_doc(vault_name: str, file_path: str, content: str, overwrite: bool = True, agent_metadata: dict | None = None)-> None:
     vault = _get_vault(vault_name=vault_name)
-    vault._require_operation(VaultOperation.WRITE)
-    vault.write_file(file_path=file_path, content=content, overwrite=overwrite, agent_metadata=agent_metadata)
+    vault._require_operation(VaultOperation.WRITE_DOC)
+    vault.write_doc(file_path=file_path, content=content, overwrite=overwrite, agent_metadata=agent_metadata)
+
+def write_skill(vault_name: str, skill: SkillInput, overwrite: bool = True)-> str:
+    vault = _get_vault(vault_name=vault_name)
+    vault._require_operation(VaultOperation.WRITE_SKILL)
+    return vault.write_skill(skill=skill, overwrite=overwrite)
 
 def list_documents(vault_name: str)-> list[SemanticDocumentInfo]:
     vault = _get_vault(vault_name=vault_name)
@@ -90,7 +95,7 @@ def list_skills(vault_name: str)-> list[SkillDocumentInfo]:
     vault._require_operation(VaultOperation.LIST_SKILLS)
     return vault.list_skills()
 
-def read_skill(vault_name: str, skill_name: str)-> Skill:
+def read_skill(vault_name: str, skill_name: str)-> SkillOutput:
     vault = _get_vault(vault_name=vault_name)
     vault._require_operation(VaultOperation.READ_SKILL)
     return vault.read_skill(skill_name=skill_name)

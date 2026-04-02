@@ -15,12 +15,18 @@ class VaultOperation(str, Enum):
     QUERY = "query"
     REINDEX = "reindex"
     DELETE = "delete"
-    WRITE = "write"
+    WRITE_DOC = "write_doc"
+    WRITE_SKILL = "write_skill"
     LIST_DOCUMENTS = "list_documents"
     LIST_SKILLS = "list_skills"
     READ_SKILL = "read_skill"
+
+class SkillInput(BaseModel):
+    name: str
+    description: str
+    instructions: str
     
-class Skill(BaseModel):
+class SkillOutput(BaseModel):
     name: str
     description: str
     instructions: str

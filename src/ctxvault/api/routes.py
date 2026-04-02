@@ -1,6 +1,6 @@
-from pathlib import Path
 from ctxvault.api.schemas import *
 from ctxvault.core.exceptions import *
+from ctxvault.models.vaults import SkillInput
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from ctxvault.core import vault_router
 
@@ -127,21 +127,50 @@ async def docs(vault_name: str, request: Request)-> ListDocsResponse:
         raise HTTPException(status_code=403, detail=str(e))
 
 @ctxvault_router.post(
-    "/write",
-    summary="Write and index a file",
-    description="Write a file to a vault and optionally index it for retrieval."
+    "/docs/write",
+    summary="Write and index a document to a semantic vault",
+    description="Write a file to a semantic vault and automatically index it for retrieval."
 )
-async def write(write_request: WriteRequest, request: Request)-> WriteResponse:
+async def write_doc(write_request: WriteDocRequest, request: Request)-> WriteDocResponse:
     try:
         check_vault_access(vault_name=write_request.vault_name, request=request)
 
-        vault_router.write_file(vault_name=write_request.vault_name,
+        vault_router.write_doc(vault_name=write_request.vault_name,
                          file_path=write_request.file_path, 
                          content=write_request.content, 
                          overwrite=write_request.overwrite, 
                          agent_metadata=write_request.agent_metadata.model_dump() if write_request.agent_metadata else None)
         
-        return WriteResponse(file_path=write_request.file_path)
+        return WriteDocResponse(file_path=write_request.file_path)
+    except VaultNotFoundError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except UnsupportedVaultOperationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except MissingAgentNameError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except VaultAccessDeniedError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except (VaultNotInitializedError, FileOutsideVaultError, UnsupportedFileTypeError, FileTypeNotPresentError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except FileAlreadyExistError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@ctxvault_router.post(
+    "/skills/write",
+    summary="Write a new skill to a skill vault",
+    description="Write a skill file to a skill vault making it available for usage."
+)
+async def write_skill(write_request: WriteSkillRequest, request: Request)-> WriteSkillResponse:
+    try:
+        check_vault_access(vault_name=write_request.vault_name, request=request)
+        
+        skill_input = SkillInput(name=write_request.skill_name, description=write_request.description, instructions=write_request.instructions)
+        
+        filename = vault_router.write_skill(vault_name=write_request.vault_name, skill=skill_input,overwrite=write_request.overwrite)
+        
+        return WriteSkillResponse(filename=filename)
     except VaultNotFoundError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except UnsupportedVaultOperationError as e:

@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from ctxvault.core.exceptions import SkillNotFoundError
-from ctxvault.models.vaults import Skill, VaultOperation
+from ctxvault.models.vaults import SkillInput, SkillOutput, VaultOperation
 import frontmatter
 from datetime import datetime
 from ctxvault.core.vaults.base import BaseVault
@@ -12,7 +12,7 @@ INDEX_FILE = "skills-index.json"
 class SkillVault(BaseVault):
     supported_operations = frozenset({
         VaultOperation.INDEX,
-        VaultOperation.WRITE,
+        VaultOperation.WRITE_SKILL,
         VaultOperation.LIST_SKILLS,
         VaultOperation.READ_SKILL,
     })
@@ -59,7 +59,7 @@ class SkillVault(BaseVault):
         skipped = [f"Conflict: skill '{n}' appears in multiple files" for n in conflicts]
         return indexed, skipped
 
-    def read_skill(self, skill_name: str) -> Skill:
+    def read_skill(self, skill_name: str) -> SkillOutput:
         index = self._load_index()
         entry = index.get(skill_name.lower())
         if not entry:
@@ -67,7 +67,7 @@ class SkillVault(BaseVault):
         
         file_path = self.vault_path / entry["file"]
         post = frontmatter.load(file_path)
-        return Skill(
+        return SkillOutput(
             name=entry["name"],
             description=entry["description"],
             instructions=post.content,
@@ -75,18 +75,21 @@ class SkillVault(BaseVault):
             path=file_path
         )
 
-    def write_file(self, file_path: str, content: str, overwrite: bool = True, agent_metadata: dict | None = None) -> None:
-        super().write_file(file_path=file_path, content=content, overwrite=overwrite)
-        
-        post = frontmatter.loads(content)
-        name = post.get("name", Path(file_path).stem)
+    def write_skill(self, skill: SkillInput, overwrite: bool = True) -> str:
+        post = frontmatter.Post(skill.instructions, name=skill.name, description=skill.description)
+        content = frontmatter.dumps(post)
+        filename = f"{skill.name.lower().replace(' ', '-')}.md"
+        self.write_file(file_path=filename, content=content, overwrite=overwrite)
+
         index = self._load_index()
-        index[name.lower()] = {
-            "name": name,
-            "file": Path(file_path).name,
-            "description": post.get("description")
+        index[skill.name.lower()] = {
+            "name": skill.name,
+            "file": filename,
+            "description": skill.description
         }
         self._save_index(index)
+
+        return filename
 
     def list_skills(self) -> list[SkillDocumentInfo]:
         index = self._load_index()

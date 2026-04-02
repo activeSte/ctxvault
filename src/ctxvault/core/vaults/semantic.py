@@ -13,7 +13,7 @@ class SemanticVault(BaseVault):
         VaultOperation.QUERY,
         VaultOperation.REINDEX,
         VaultOperation.DELETE,
-        VaultOperation.WRITE,
+        VaultOperation.WRITE_DOC,
         VaultOperation.LIST_DOCUMENTS,
     })
 
@@ -100,8 +100,8 @@ class SemanticVault(BaseVault):
         from ctxvault.core import querying
         return querying.list_documents(config=self.config)
     
-    def write_file(self, file_path: str, content: str, overwrite: bool = True, agent_metadata: dict | None = None)-> None:
-        super().write_file(file_path=file_path, content=content, overwrite=overwrite, agent_metadata=agent_metadata)
+    def write_doc(self, file_path: str, content: str, overwrite: bool = True, agent_metadata: dict | None = None)-> None:
+        self.write_file(file_path=file_path, content=content, overwrite=overwrite, agent_metadata=agent_metadata)
 
         abs_path = (self.vault_path / file_path).resolve()
         self.index_file(file_path=abs_path, agent_metadata=agent_metadata)

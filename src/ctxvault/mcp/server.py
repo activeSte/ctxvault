@@ -1,6 +1,7 @@
 from ctxvault.api.schemas import *
 from ctxvault.core import vault_router
 from ctxvault.core.exceptions import *
+from ctxvault.models.vaults import SkillInput
 from mcp.server.fastmcp import FastMCP
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
@@ -42,18 +43,18 @@ def query(vault_name: str, query: str) -> QueryResponse:
     except UnsupportedVaultOperationError as e:
         raise ValueError(e)
 
-@mcp.tool(description="Save new information or agent-generated content to a vault for future retrieval. Use this to persist important context, summaries, or notes that should be remembered across sessions. Supports .txt, .md, and .docx formats.")
-def write(vault_name: str, file_path: str, content: str, generated_by: str, overwrite: bool = False)-> WriteResponse:
+@mcp.tool(description="Save new information or agent-generated content to a semantic vault for future retrieval. Use this only with semantic vaults, to persist important context, summaries, or notes that should be remembered across sessions. Supports .txt, .md, and .docx formats.")
+def write_doc(vault_name: str, file_path: str, content: str, generated_by: str, overwrite: bool = False)-> WriteDocResponse:
     try:
         check_access(vault_name, AGENT_ID)
         timestamp = datetime.now(timezone.utc).isoformat()
-        vault_router.write_file(vault_name=vault_name,
+        vault_router.write_doc(vault_name=vault_name,
                          file_path=file_path, 
                          content=content, 
                          overwrite=overwrite, 
                          agent_metadata=AgentMetadata(generated_by=generated_by, timestamp=timestamp))
         
-        return WriteResponse(file_path=file_path)
+        return WriteDocResponse(file_path=file_path)
     except VaultNotFoundError as e:
         raise ValueError(f"Vault '{vault_name}' does not exist.")
     except (VaultNotInitializedError, FileOutsideVaultError, UnsupportedFileTypeError, FileTypeNotPresentError) as e:
@@ -80,6 +81,25 @@ def list_docs(vault_name: str) -> ListDocsResponse:
         raise ValueError(f"Vault {vault_name} doesn't exist.")
     except UnsupportedVaultOperationError as e:
         raise ValueError(e)
+    
+@mcp.tool(description="Create and store a new skill in a skill vault. Use this to persist procedural knowledge, instructions, or how-to guides that agents can retrieve and execute later. The skill will be indexed by name and description for fast lookup. Use this only with skill vaults.")
+def write_skill(write_request: WriteSkillRequest, overwrite: bool = False)-> WriteSkillResponse:
+    try:
+        check_access(write_request.vault_name, AGENT_ID)
+        skill_input = SkillInput(name=write_request.skill_name, description=write_request.description, instructions=write_request.instructions)
+        filename = vault_router.write_skill(vault_name=write_request.vault_name, skill = skill_input, overwrite=overwrite)
+        
+        return WriteSkillResponse(filename=filename)
+    except VaultNotFoundError as e:
+        raise ValueError(f"Vault '{write_request.vault_name}' does not exist.")
+    except (VaultNotInitializedError, FileOutsideVaultError, UnsupportedFileTypeError, FileTypeNotPresentError) as e:
+        raise ValueError(f"Error writing file: {e}")
+    except FileAlreadyExistError as e:
+        raise ValueError(f"File already exists: {e}")
+    except UnsupportedVaultOperationError as e:
+        raise ValueError(e)
+    except Exception as e:
+        raise ValueError(f"Unexpected error writing file: {e}")
     
 @mcp.tool(description="List all available skills inside a specific vault. Use this to understand what skills are available before trying to fetch one.")
 def list_skills(vault_name: str) -> ListSkillsResponse:
