@@ -10,6 +10,10 @@ class ExtractionError(Exception):
     """Raised when text extraction fails for reasons other than file type."""
     pass
 
+class VaultTypeNotValidError(Exception):
+    """Raised when trying to initialize a vault with a not valid type"""
+    pass
+
 class VaultAlreadyExistsError(Exception):
     """Raised when a Context Vault is already initialized at that path."""
     def __init__(self, existing_path: str):
@@ -42,6 +46,14 @@ class EmptyQueryError(Exception):
 
 class VaultAccessDeniedError(Exception):
     """Raised when agents try to access a restricted vault they are not authorized to access."""
+    pass
+
+class UnsupportedVaultOperationError(Exception):
+    """Raised when trying to perform an unsupported operation on a specific vault type."""
+    pass
+
+class SkillNotFoundError(Exception):
+    """Raised when trying to read a skill not present in the vault."""
     pass
 
 class MissingAgentNameError(Exception):

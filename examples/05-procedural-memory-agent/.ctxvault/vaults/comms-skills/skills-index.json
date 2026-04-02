@@ -1,0 +1,17 @@
+{
+  "faq response": {
+    "name": "FAQ Response",
+    "file": "faq-response.md",
+    "description": "How to write answers to frequently asked questions from employees"
+  },
+  "company newsletter contribution": {
+    "name": "Company Newsletter Contribution",
+    "file": "newsletter.md",
+    "description": "How to write an engineering section for the monthly company newsletter"
+  },
+  "weekly engineering update": {
+    "name": "Weekly Engineering Update",
+    "file": "weekly-update.md",
+    "description": "How to write the weekly engineering status update for stakeholders"
+  }
+}

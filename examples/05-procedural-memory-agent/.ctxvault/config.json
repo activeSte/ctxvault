@@ -1,0 +1,1 @@
+{"vaults": {"company-knowledge": {"type": "semantic", "vault_path": ".ctxvault/vaults/company-knowledge", "db_path": ".ctxvault/vaults/company-knowledge/chroma", "restricted": false, "allowed_agents": []}, "comms-skills": {"type": "skill", "vault_path": ".ctxvault/vaults/comms-skills", "db_path": null, "restricted": false, "allowed_agents": []}}}

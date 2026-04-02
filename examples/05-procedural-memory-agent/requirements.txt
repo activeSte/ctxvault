@@ -1,0 +1,7 @@
+langchain-openai
+langchain-mcp-adapters
+langchain
+langgraph
+mcp
+requests
+uvicorn

@@ -1,9 +1,12 @@
-from ctxvault.models.documents import DocumentInfo
+from ctxvault.models.documents import SemanticDocumentInfo, SkillDocumentInfo
 from ctxvault.models.query_result import ChunkMatch
+from ctxvault.models.vaults import SkillOutput, VaultType
 from pydantic import BaseModel
 
 class VaultInfo(BaseModel):
     name: str
+    type: VaultType
+    scope: str
     vault_path: str
     restricted: bool
     allowed_agents: list[str] | None = None
@@ -50,18 +53,35 @@ class ListVaultsResponse(BaseModel):
 
 class ListDocsResponse(BaseModel):
     vault_name: str
-    documents: list[DocumentInfo]
+    documents: list[SemanticDocumentInfo]
+
+class ListSkillsResponse(BaseModel):
+    vault_name: str
+    skills: list[SkillDocumentInfo]
 
 class AgentMetadata(BaseModel):
     generated_by: str
     timestamp: str
 
-class WriteRequest(BaseModel):
+class WriteDocRequest(BaseModel):
     vault_name: str
     file_path: str
     content: str
     overwrite: bool
     agent_metadata: AgentMetadata | None = None
 
-class WriteResponse(BaseModel):
+class WriteDocResponse(BaseModel):
     file_path: str
+
+class WriteSkillRequest(BaseModel):
+    vault_name: str
+    skill_name: str
+    description: str
+    instructions: str
+    overwrite: bool = True
+
+class WriteSkillResponse(BaseModel):
+    filename: str
+
+class SkillResponse(BaseModel):
+    skill: SkillOutput
