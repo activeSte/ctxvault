@@ -28,9 +28,9 @@ def build_documents_from_metadatas(metadatas)-> list[SemanticDocumentInfo]:
         for doc_id, (source, filetype, count) in acc.items()
     ]
 
-def query(query_txt: str, config: dict, filters: dict | None = None)-> dict:
+def query(query_txt: str, config: dict, n_results: int = 5, filters: dict | None = None)-> dict:
     query_embedding = embed_list(chunks=[query_txt])
-    return chroma_store.query(query_embedding=query_embedding, config=config, filters=filters)
+    return chroma_store.query(query_embedding=query_embedding, config=config, n_results=n_results, filters=filters)
 
 def list_documents(config: dict)-> list[SemanticDocumentInfo]:
     metadatas = chroma_store.get_all_metadatas(config=config)
