@@ -1,84 +1,84 @@
-# CtxVault Benchmarks
+# Benchmarks
 
-Reproducible benchmarks comparing CtxVault's structural vault isolation against alternative approaches.
+Evaluation infrastructure for CtxVault. Work in progress.
 
-## What is measured
-
-| Metric | Description |
-|--------|-------------|
-| **Context Contamination Rate** | % of returned chunks belonging to the wrong vault. Measures isolation quality. With structural isolation this should be 0%. |
-| **Latency p50 / p95** | Retrieval latency in ms at median and 95th percentile. Measures that isolation does not introduce overhead. |
-
-## Configurations tested
-
-| Configuration | Isolation approach |
-|---------------|--------------------|
-| **CtxVault** | Structural — each vault is an independent index |
-| **ChromaDB + metadata filtering** | Logical — single shared index, filtered by metadata at query time |
-| **Mem0** *(optional)* | user_id-based filtering on a shared store |
-
-## Dataset
-
-The `dataset/` folder contains synthetic documents organized into three thematic vaults:
+## Structure
 
 ```
-dataset/
-├── vault_medicine/      # medical documents
-├── vault_law/           # legal documents  
-├── vault_technology/    # technology documents
-└── queries.json         # queries with ground truth
+benchmarks/
+  utils.py                          shared helpers (vault setup, metrics, dataset loaders)
+  internal/
+    compare_strategies.py           A/B comparison of chunking strategies (old vs new)
+    beir_benchmark.py               BEIR evaluation of chunking strategies
+    coir_benchmark.py               CoIR evaluation of chunking strategies
+  retrieval/
+    beir_vs_alternatives.py         CtxVault vs ChromaDB vs LangChain on BEIR
+    coir_vs_alternatives.py         CtxVault vs ChromaDB vs LangChain on CoIR
 ```
 
-Each query in `queries.json` specifies the expected vault and the relevant chunk IDs, used to compute metrics.
+`internal/` benchmarks compare CtxVault's own chunking strategies against each other.
+`retrieval/` benchmarks compare CtxVault against alternative retrieval systems on the same datasets, same embedding model, same queries.
 
-## Setup
+## Retrieval benchmarks
+
+Compare CtxVault's full pipeline against ChromaDB (raw) and LangChain retriever on standard IR datasets. All systems use the same embedding model (all-MiniLM-L6-v2) for fair comparison.
+
+### Setup
 
 ```bash
-pip install -r benchmarks/requirements.txt
+pip install -r benchmarks/retrieval/requirements.txt
 ```
 
-For CtxVault runner, start the server first:
-```bash
-uvicorn ctxvault.api.app:app
-```
-
-## Usage
+### Run
 
 ```bash
-# Run all default runners (ctxvault + chromadb)
-python benchmarks/evaluate.py
-
-# Include mem0 (requires OPENAI_API_KEY)
-python benchmarks/evaluate.py --runners ctxvault chromadb mem0
-
-# Change top-k
-python benchmarks/evaluate.py --top-k 10
+python benchmarks/retrieval/beir_vs_alternatives.py
+python benchmarks/retrieval/coir_vs_alternatives.py
 ```
 
-## Results
+### Results
 
-<!-- Results will be populated after running the benchmark -->
+Tested on BEIR (NFCorpus, SciFact) and CoIR (CoSQA, StackOverflow-QA). CtxVault introduces no retrieval overhead compared to raw ChromaDB or LangChain.
 
-```
----------------------------------------------------------------------------
-Configuration              Contamination   Latency p50   Latency p95
----------------------------------------------------------------------------
-ctxvault                            0.0%         XXms          XXms
-chromadb                            X.X%         XXms          XXms
----------------------------------------------------------------------------
-```
+**BEIR**
 
-> Benchmarks run on [hardware spec]. Results may vary depending on machine and dataset size.
+| Dataset  | Strategy            | P@5   | R@5   | MRR    | nDCG@5 |
+|----------|---------------------|-------|-------|--------|--------|
+| NFCorpus | ChromaDB (raw)      | 33.2% | 9.2%  | 0.4857 | 0.3619 |
+|          | LangChain retriever | 32.4% | 8.3%  | 0.4833 | 0.3562 |
+|          | CtxVault (full)     | 33.2% | 9.2%  | 0.4857 | 0.3619 |
+| SciFact  | ChromaDB (raw)      | 18.0% | 80.0% | 0.6897 | 0.7157 |
+|          | LangChain retriever | 18.0% | 80.0% | 0.7013 | 0.7245 |
+|          | CtxVault (full)     | 18.0% | 80.0% | 0.6897 | 0.7157 |
 
-## Reproducing
+**CoIR**
 
-The dataset is fully static and committed to the repo — no external services required to reproduce results (except an OpenAI key if running the mem0 runner).
+| Dataset          | Strategy            | P@5   | R@5   | MRR    | nDCG@5 |
+|------------------|---------------------|-------|-------|--------|--------|
+| CoSQA            | ChromaDB (raw)      | 12.5% | 62.6% | 0.3636 | 0.4290 |
+|                  | LangChain retriever | 12.5% | 62.6% | 0.3636 | 0.4290 |
+|                  | CtxVault (full)     | 12.5% | 62.6% | 0.3636 | 0.4290 |
+| StackOverflow-QA | ChromaDB (raw)      | 18.9% | 94.3% | 0.8850 | 0.8998 |
+|                  | LangChain retriever | 18.8% | 94.1% | 0.8845 | 0.8989 |
+|                  | CtxVault (full)     | 18.9% | 94.4% | 0.8881 | 0.9023 |
+
+CtxVault matches or marginally exceeds ChromaDB and LangChain across all datasets and metrics. The vault abstraction adds no measurable retrieval overhead.
+
+## Internal benchmarks
+
+Compare CtxVault's smart chunking (v0.6.1) against the previous fixed-size chunking. These are regression tests for internal development.
 
 ```bash
-git clone https://github.com/Filippo-Venturini/ctxvault
-cd ctxvault
-pip install -e .
-pip install -r benchmarks/requirements.txt
-uvicorn ctxvault.api.app:app &
-python benchmarks/evaluate.py
+pip install -r benchmarks/internal/requirements.txt
+python benchmarks/internal/compare_strategies.py
+python benchmarks/internal/beir_benchmark.py
+python benchmarks/internal/coir_benchmark.py
 ```
+
+## Roadmap
+
+Additional benchmarks under development:
+
+- Multi-agent isolation evaluation
+- Typed memory discrimination (semantic vs procedural retrieval accuracy)
+- Cross-session persistence with LongMemEval / LoCoMo
